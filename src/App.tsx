@@ -17,11 +17,6 @@ function App() {
   const velocityRef = useRef([0.0, 0.0])
   const keysRef = useRef({ w: false, a: false, s: false, d: false })
 
-  const normalize = (v: number[]) => {
-    const length = Math.sqrt(v.reduce((sum, val) => sum + val * val, 0))
-    return v.map(val => val / length)
-  }
-
   const updateTexture = (gl: WebGL2RenderingContext, texture: WebGLTexture, voxelData: Uint8Array) => {
     gl.bindTexture(gl.TEXTURE_3D, texture)
     gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, 16, 16, 16, 0, gl.RED, gl.UNSIGNED_BYTE, voxelData)
@@ -148,6 +143,10 @@ function App() {
 
       const createProgram = (gl: WebGL2RenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader): WebGLProgram | null => {
         const program = gl.createProgram()
+        if (!program) {
+          console.error('Failed to create program')
+          return null
+        }
         gl.attachShader(program, vertexShader)
         gl.attachShader(program, fragmentShader)
         gl.linkProgram(program)
