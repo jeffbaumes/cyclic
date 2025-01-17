@@ -14,8 +14,8 @@ function App() {
   const eyeRef = useRef([0.5, 0.5, -1.0])
   const azimuthRef = useRef(0.0)
   const elevationRef = useRef(0.0)
-  const velocityRef = useRef([0.0, 0.0])
-  const keysRef = useRef({ w: false, a: false, s: false, d: false })
+  const velocityRef = useRef([0.0, 0.0, 0.0])
+  const keysRef = useRef({ w: false, a: false, s: false, d: false, shift: false, ' ': false })
 
   const updateTexture = (gl: WebGL2RenderingContext, texture: WebGLTexture, voxelData: Uint8Array) => {
     gl.bindTexture(gl.TEXTURE_3D, texture)
@@ -35,11 +35,11 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      keysRef.current = { ...keysRef.current, [event.key]: true }
+      keysRef.current = { ...keysRef.current, [event.key.toLowerCase()]: true }
     }
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      keysRef.current = { ...keysRef.current, [event.key]: false }
+      keysRef.current = { ...keysRef.current, [event.key.toLowerCase()]: false }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -84,13 +84,10 @@ function App() {
               const wrappedPos = pos.map(p => ((Math.floor(p * 16) % 16) + 16) % 16) // Ensure positive values
               const index = wrappedPos[0] + wrappedPos[1] * 16 + wrappedPos[2] * 16 * 16
               if (voxelData[index] > 0) {
-                console.log(event.button)
-                console.log(prevIndex)
                 if (event.button === 0) {
                   voxelData[index] = 0
                   updateTexture(gl, texture, voxelData)
                 } else if (event.button === 2 && prevIndex !== null) {
-                  console.log('setting to 255')
                   voxelData[prevIndex] = 255
                   updateTexture(gl, texture, voxelData)
                 }
@@ -115,7 +112,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    console.log("init")
     const canvas = canvasRef.current
     if (canvas) {
       const gl = canvas.getContext('webgl2')
@@ -245,7 +241,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    console.log("render")
     const gl = glRef.current
     const program = programRef.current
     const eyeUniformLocation = eyeUniformLocationRef.current
@@ -258,13 +253,16 @@ function App() {
       let newVelocity = [...velocityRef.current]
       const acceleration = 0.5
       const deceleration = 2
-      if (keysRef.current.w) newVelocity[1] += acceleration * deltaTime
-      if (keysRef.current.s) newVelocity[1] -= acceleration * deltaTime
+      if (keysRef.current.w) newVelocity[2] += acceleration * deltaTime
+      if (keysRef.current.s) newVelocity[2] -= acceleration * deltaTime
       if (keysRef.current.a) newVelocity[0] += acceleration * deltaTime
       if (keysRef.current.d) newVelocity[0] -= acceleration * deltaTime
+      if (keysRef.current[' ']) newVelocity[1] += acceleration * deltaTime
+      if (keysRef.current.shift) newVelocity[1] -= acceleration * deltaTime
 
       newVelocity[0] *= 1 - deceleration * deltaTime
       newVelocity[1] *= 1 - deceleration * deltaTime
+      newVelocity[2] *= 1 - deceleration * deltaTime
 
       velocityRef.current = newVelocity
 
@@ -285,9 +283,9 @@ function App() {
       ]
 
       const newEye = [
-        eyeRef.current[0] + (forwardDirection[0] * newVelocity[1] + rightDirection[0] * newVelocity[0]) * deltaTime,
-        eyeRef.current[1],
-        eyeRef.current[2] + (forwardDirection[2] * newVelocity[1] + rightDirection[2] * newVelocity[0]) * deltaTime
+        eyeRef.current[0] + (forwardDirection[0] * newVelocity[2] + rightDirection[0] * newVelocity[0]) * deltaTime,
+        eyeRef.current[1] + newVelocity[1] * deltaTime,
+        eyeRef.current[2] + (forwardDirection[2] * newVelocity[2] + rightDirection[2] * newVelocity[0]) * deltaTime
       ]
       eyeRef.current = newEye
 

@@ -16,11 +16,14 @@ void main() {
   mat3 lookAt = mat3(right, up, forward);
   vec3 rayDirection = normalize(lookAt * vec3(st, 1.0)); // Rotate st into the direction of lookDirection
 
-  for (float t = 0.0; t < 5.0; t += 0.01) {
+  for (float t = 0.0; t < 5.0; t += 0.005) {
     vec3 pos = rayOrigin + t * rayDirection;
-    vec3 wrappedPos = fract(pos);
-    if (texture(u_voxelData, wrappedPos).r > 0.0) {
-      float c = 1.0 - t / 5.0;
+    ivec3 texelPos = ivec3(floor(pos * vec3(textureSize(u_voxelData, 0))));
+    ivec3 wrappedTexelPos = ivec3(mod(float(texelPos.x), float(textureSize(u_voxelData, 0).x)),
+                                  mod(float(texelPos.y), float(textureSize(u_voxelData, 0).y)),
+                                  mod(float(texelPos.z), float(textureSize(u_voxelData, 0).z)));
+    if (texelFetch(u_voxelData, wrappedTexelPos, 0).r == 1.0) {
+      float c = t / 5.0;
       outColor = vec4(vec3(c), 1.0);
       return;
     }
