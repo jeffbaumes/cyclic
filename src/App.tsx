@@ -3,11 +3,14 @@ import vertexShaderSource from './shaders/world.vert?raw'
 import fragmentShaderSource from './shaders/world.frag?raw'
 
 function App() {
+  const worldSize = 64;
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const glRef = useRef<WebGL2RenderingContext | null>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const eyeUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const lookDirectionUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
+  const renderDistanceUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
+  const rayStepUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const voxelDataRef = useRef<Uint8Array | null>(null)
   const textureRef = useRef<WebGLTexture | null>(null)
   const lastTimeRef = useRef<number>(0)
@@ -19,12 +22,13 @@ function App() {
 
   const updateTexture = (gl: WebGL2RenderingContext, texture: WebGLTexture, voxelData: Uint8Array) => {
     gl.bindTexture(gl.TEXTURE_3D, texture)
-    gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, 16, 16, 16, 0, gl.RED, gl.UNSIGNED_BYTE, voxelData)
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, worldSize, worldSize, worldSize, 0, gl.RED, gl.UNSIGNED_BYTE, voxelData)
   }
 
   const resizeCanvas = (canvas: HTMLCanvasElement, gl: WebGL2RenderingContext) => {
-    const displayWidth = canvas.clientWidth / 4
-    const displayHeight = canvas.clientHeight / 4
+    const pixelSize = 2
+    const displayWidth = canvas.clientWidth / pixelSize
+    const displayHeight = canvas.clientHeight / pixelSize
 
     if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
       canvas.width = displayWidth
@@ -81,8 +85,8 @@ function App() {
                 eyeRef.current[1] + t * lookDirection[1],
                 eyeRef.current[2] + t * lookDirection[2]
               ]
-              const wrappedPos = pos.map(p => ((Math.floor(p * 16) % 16) + 16) % 16) // Ensure positive values
-              const index = wrappedPos[0] + wrappedPos[1] * 16 + wrappedPos[2] * 16 * 16
+              const wrappedPos = pos.map(p => ((Math.floor(p) % worldSize) + worldSize) % worldSize) // Ensure positive values
+              const index = wrappedPos[0] + wrappedPos[1] * worldSize + wrappedPos[2] * worldSize * worldSize
               if (voxelData[index] > 0) {
                 if (event.button === 0) {
                   voxelData[index] = 0
@@ -176,6 +180,8 @@ function App() {
       const voxelDataUniformLocation = gl.getUniformLocation(program, 'u_voxelData')
       eyeUniformLocationRef.current = gl.getUniformLocation(program, 'u_eye')
       lookDirectionUniformLocationRef.current = gl.getUniformLocation(program, 'u_lookDirection')
+      renderDistanceUniformLocationRef.current = gl.getUniformLocation(program, 'u_renderDistance')
+      rayStepUniformLocationRef.current = gl.getUniformLocation(program, 'u_rayStep')
 
       const positionBuffer = gl.createBuffer()
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
@@ -189,27 +195,41 @@ function App() {
       ]
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
 
-      const size = 16
-      const voxelData = new Uint8Array(size * size * size)
-      const center = size / 2
-      const radius = size / 6
-      for (let z = 0; z < size; z++) {
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const dx = x - center
-            const dy = y - center
-            const dz = z - center
-            if (dx * dx + dy * dy + dz * dz < radius * radius) {
-              voxelData[x + y * size + z * size * size] = 255
+      const voxelData = new Uint8Array(worldSize * worldSize * worldSize)
+
+      const fillSphere = () => {
+        const center = worldSize / 2
+        const radius = worldSize / 6
+        for (let z = 0; z < worldSize; z++) {
+          for (let y = 0; y < worldSize; y++) {
+            for (let x = 0; x < worldSize; x++) {
+              const dx = x - center
+              const dy = y - center
+              const dz = z - center
+              if (dx * dx + dy * dy + dz * dz < radius * radius) {
+                voxelData[x + y * worldSize + z * worldSize * worldSize] = 255
+              }
             }
           }
         }
       }
+      fillSphere()
+
+      for (let z = 0; z < worldSize; z++) {
+        for (let y = 0; y < worldSize; y++) {
+          for (let x = 0; x < worldSize; x++) {
+            if (Math.random() < 0.01) {
+              voxelData[x + y * worldSize + z * worldSize * worldSize] = 255
+            }
+          }
+        }
+      }
+
       voxelDataRef.current = voxelData
 
       const texture = gl.createTexture()
       gl.bindTexture(gl.TEXTURE_3D, texture)
-      gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, size, size, size, 0, gl.RED, gl.UNSIGNED_BYTE, voxelData)
+      gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, worldSize, worldSize, worldSize, 0, gl.RED, gl.UNSIGNED_BYTE, voxelData)
       gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
       gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
       gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
@@ -245,14 +265,16 @@ function App() {
     const program = programRef.current
     const eyeUniformLocation = eyeUniformLocationRef.current
     const lookDirectionUniformLocation = lookDirectionUniformLocationRef.current
+    const renderDistanceUniformLocation = renderDistanceUniformLocationRef.current
+    const rayStepUniformLocation = rayStepUniformLocationRef.current
 
     const update = (time: number) => {
       const deltaTime = (time - lastTimeRef.current) / 1000
       lastTimeRef.current = time
 
       let newVelocity = [...velocityRef.current]
-      const acceleration = 0.5
-      const deceleration = 2
+      const acceleration = 10
+      const deceleration = 5
       if (keysRef.current.w) newVelocity[2] += acceleration * deltaTime
       if (keysRef.current.s) newVelocity[2] -= acceleration * deltaTime
       if (keysRef.current.a) newVelocity[0] += acceleration * deltaTime
@@ -295,6 +317,8 @@ function App() {
           gl.useProgram(program)
           gl.uniform3fv(eyeUniformLocation, newEye)
           gl.uniform3fv(lookDirectionUniformLocation, lookDirection)
+          gl.uniform1f(renderDistanceUniformLocation, 200.0)
+          gl.uniform1f(rayStepUniformLocation, 0.01)
           gl.drawArrays(gl.TRIANGLES, 0, 6)
         }
         render()
