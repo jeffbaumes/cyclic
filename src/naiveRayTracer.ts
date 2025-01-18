@@ -1,13 +1,8 @@
 import vertexShaderSource from './shaders/world.vert?raw';
 import fragmentShaderSource from './shaders/world.frag?raw';
+import { Renderer } from './types';
 
-export type NaiveRayTracer = {
-  voxelData: Uint8Array;
-  render: (eye: number[], lookDirection: number[], renderDistance: number, rayStep: number) => void;
-  updateVoxel: (index: number, value: number) => void;
-};
-
-export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: Uint8Array): NaiveRayTracer => {
+export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: Uint8Array): Renderer => {
   const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
     const shader = gl.createShader(type);
     if (!shader) {

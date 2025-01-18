@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { init, NaiveRayTracer } from './naiveRayTracer';
+import { init } from './naiveRayTracer';
+import { Renderer } from './types';
 
 function App() {
   const worldSize = 16;
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rayTracerRef = useRef<NaiveRayTracer | null>(null);
+  const rendererRef = useRef<Renderer | null>(null);
   const lastTimeRef = useRef<number>(0);
   const eyeRef = useRef([0.5, 0.5, -1.0]);
   const azimuthRef = useRef(0.0);
@@ -54,8 +55,8 @@ function App() {
 
       const handleClick = (event: MouseEvent) => {
         if (document.pointerLockElement === canvas) {
-          const renderer = rayTracerRef.current;
-          const voxelData = rayTracerRef.current?.voxelData;
+          const renderer = rendererRef.current;
+          const voxelData = rendererRef.current?.voxelData;
           if (renderer && voxelData) {
             let prevIndex: number | null = null;
             const lookDirection = [
@@ -114,7 +115,7 @@ function App() {
       }
 
       const rayTracer = init(gl, worldSize, voxelData);
-      rayTracerRef.current = rayTracer;
+      rendererRef.current = rayTracer;
 
       resizeCanvas(canvas, gl);
 
@@ -170,8 +171,8 @@ function App() {
       ];
       eyeRef.current = newEye;
 
-      if (rayTracerRef.current) {
-        rayTracerRef.current.render(newEye, lookDirection, 100.0, 0.01);
+      if (rendererRef.current) {
+        rendererRef.current.render(newEye, lookDirection, 100.0, 0.01);
       }
 
       requestAnimationFrame(update);
