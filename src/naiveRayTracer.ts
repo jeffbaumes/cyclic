@@ -1,6 +1,7 @@
 import vertexShaderSource from './shaders/world.vert?raw';
 import fragmentShaderSource from './shaders/world.frag?raw';
 import { Renderer } from './types';
+import { vec3 } from 'gl-matrix';
 
 export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: Uint8Array): Renderer => {
   const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
@@ -90,7 +91,7 @@ export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: U
     gl.texSubImage3D(gl.TEXTURE_3D, 0, index % worldSize, Math.floor(index / worldSize) % worldSize, Math.floor(index / (worldSize * worldSize)), 1, 1, 1, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array([value]));
   };
 
-  const render = (eye: number[], lookDirection: number[], renderDistance: number, rayStep: number) => {
+  const render = (eye: vec3, lookDirection: vec3, renderDistance: number, rayStep: number) => {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
