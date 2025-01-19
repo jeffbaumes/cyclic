@@ -3,11 +3,13 @@ import { vec3 } from 'gl-matrix';
 import { init } from './meshRenderer';
 import { Renderer } from './types';
 import { makeNoise3D } from 'open-simplex-noise';
+import { createCrosshair } from './crosshair';
 
 function App() {
   const worldSize = 8;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<Renderer | null>(null);
+  const crosshairRef = useRef<Renderer | null>(null);
   const lastTimeRef = useRef<number>(0);
   const eyeRef = useRef(vec3.fromValues(0.5, 0.5, -1.0));
   const azimuthRef = useRef(0.0);
@@ -51,8 +53,8 @@ function App() {
         if (document.pointerLockElement !== canvas) {
           return;
         }
-        azimuthRef.current -= event.movementX * 0.01;
-        elevationRef.current = Math.max(-(Math.PI / 2 - 0.001), Math.min(Math.PI / 2 - 0.001, elevationRef.current - event.movementY * 0.01));
+        azimuthRef.current -= event.movementX * 0.002;
+        elevationRef.current = Math.max(-(Math.PI / 2 - 0.001), Math.min(Math.PI / 2 - 0.001, elevationRef.current - event.movementY * 0.005));
       };
 
       const handleClick = (event: MouseEvent) => {
@@ -133,10 +135,6 @@ function App() {
             nx += zb / Math.SQRT2;
             ny += zb / Math.SQRT2;
             const value = noise(nx, ny, nz);
-            // const n1 = noise(scale * xa, scale * xb, scale * ya, scale * yb);
-            // const n2 = noise(scale * xb, scale * ya, scale * yb, scale * za);
-            // const n3 = noise(scale * ya, scale * yb, scale * za, scale * zb);
-            // const value = (n1 + n2 + n3) / 3;
             voxelData[index] = value > 0.0 ? 255 : 0;
           }
         }
@@ -144,6 +142,9 @@ function App() {
 
       const rayTracer = init(gl, worldSize, voxelData);
       rendererRef.current = rayTracer;
+
+      const crosshair = createCrosshair(gl);
+      crosshairRef.current = crosshair;
 
       resizeCanvas(canvas, gl);
 
@@ -198,6 +199,9 @@ function App() {
       if (rendererRef.current) {
         rendererRef.current.render(newEye, lookDirection, worldSize * 2, 0.01);
       }
+      if (crosshairRef.current) {
+        crosshairRef.current.render(newEye, lookDirection, worldSize * 2, 0.01);
+      }
 
       requestAnimationFrame(update);
     };
@@ -206,7 +210,7 @@ function App() {
   }, []);
 
   return (
-    <div className="w-screen h-screen flex items-center justify-center">
+    <div className="w-screen h-screen flex items-center justify-center absolute top-0 left-0">
       <canvas ref={canvasRef} className="w-full h-full"></canvas>
     </div>
   );
