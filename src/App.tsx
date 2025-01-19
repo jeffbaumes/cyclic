@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import { vec3 } from 'gl-matrix';
 import { init } from './meshRenderer';
 import { Renderer } from './types';
-import { makeNoise3D } from 'open-simplex-noise';
+import { makeNoise3D, makeNoise4D } from 'open-simplex-noise';
 import { createCrosshair } from './crosshair';
 
 function App() {
-  const worldSize = 8;
+  const worldSize = 64;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<Renderer | null>(null);
   const crosshairRef = useRef<Renderer | null>(null);
@@ -110,8 +110,11 @@ function App() {
       }
 
       const noise = makeNoise3D(Date.now());
+      const noise4 = makeNoise4D(Date.now());
       const voxelData = new Uint8Array(worldSize * worldSize * worldSize);
       const scale = 0.001 * worldSize;
+      let worldType: string = 'terrain';
+      const heightScale = 10;
       for (let x = 0; x < worldSize; x++) {
         for (let y = 0; y < worldSize; y++) {
           for (let z = 0; z < worldSize; z++) {
@@ -122,26 +125,32 @@ function App() {
             const yb = scale * Math.sin(y / worldSize * Math.PI * 2);
             const zb = scale * Math.sin(z / worldSize * Math.PI * 2);
             const index = x + y * worldSize + z * worldSize * worldSize;
-            let nx = 0;
-            let ny = 0;
-            let nz = 0;
-            nx += xa;
-            ny += xb / Math.SQRT2;
-            nz += xb / Math.SQRT2;
-            ny += ya;
-            nx += yb / Math.SQRT2;
-            nz += yb / Math.SQRT2;
-            nz += za;
-            nx += zb / Math.SQRT2;
-            ny += zb / Math.SQRT2;
-            const value = noise(nx, ny, nz);
-            voxelData[index] = value > 0.0 ? 255 : 0;
+            if (worldType === 'blob') {
+              let nx = 0;
+              let ny = 0;
+              let nz = 0;
+              nx += xa;
+              ny += xb / Math.SQRT2;
+              nz += xb / Math.SQRT2;
+              ny += ya;
+              nx += yb / Math.SQRT2;
+              nz += yb / Math.SQRT2;
+              nz += za;
+              nx += zb / Math.SQRT2;
+              ny += zb / Math.SQRT2;
+              const value = noise(nx, ny, nz);
+              voxelData[index] = value > 0.0 ? 255 : 0;
+            } else if (worldType === 'terrain') {
+              const height = noise4(xa, xb, za, zb) * heightScale + worldSize / 2;
+              voxelData[index] = y < height ? 255 : 0;
+            }
           }
         }
       }
 
-      const rayTracer = init(gl, worldSize, voxelData);
-      rendererRef.current = rayTracer;
+      init(gl, worldSize, voxelData).then((renderer) => {
+        rendererRef.current = renderer;
+      });
 
       const crosshair = createCrosshair(gl);
       crosshairRef.current = crosshair;
@@ -162,7 +171,7 @@ function App() {
       lastTimeRef.current = time;
 
       const newVelocity = vec3.clone(velocityRef.current);
-      const acceleration = 10;
+      const acceleration = 40;
       const deceleration = 5;
       if (keysRef.current.w) newVelocity[2] += acceleration * deltaTime;
       if (keysRef.current.s) newVelocity[2] -= acceleration * deltaTime;
@@ -197,10 +206,10 @@ function App() {
       eyeRef.current = newEye;
 
       if (rendererRef.current) {
-        rendererRef.current.render(newEye, lookDirection, worldSize * 2, 0.01);
+        rendererRef.current.render(newEye, lookDirection, 150, 0.01);
       }
       if (crosshairRef.current) {
-        crosshairRef.current.render(newEye, lookDirection, worldSize * 2, 0.01);
+        crosshairRef.current.render(newEye, lookDirection, 150, 0.01);
       }
 
       requestAnimationFrame(update);

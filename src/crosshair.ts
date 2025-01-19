@@ -58,7 +58,7 @@ export const createCrosshair = (gl: WebGL2RenderingContext): Renderer => {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE_MINUS_SRC_COLOR, gl.ZERO);
+    // gl.blendFunc(gl.ONE_MINUS_SRC_COLOR, gl.ZERO);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
     gl.vertexAttribPointer(attributes.position, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(attributes.position);
