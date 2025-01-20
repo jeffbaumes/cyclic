@@ -4,108 +4,78 @@ import { Renderer } from './types';
 import { mat4, vec3 } from 'gl-matrix';
 import { addQuad } from './quad';
 
-const createMesh = (voxelData: Uint8Array, worldSize: number): {
+const createMesh = (texture: number): {
   position: Float32Array,
   info: Uint32Array,
 } => {
   const vertices: number[] = [];
   const infos: number[] = [];
 
-  const getVoxel = (x: number, y: number, z: number) => {
-    const wrappedX = (x + worldSize) % worldSize;
-    const wrappedY = (y + worldSize) % worldSize;
-    const wrappedZ = (z + worldSize) % worldSize;
-    return voxelData[wrappedX + wrappedY * worldSize + wrappedZ * worldSize * worldSize];
-  };
+  const size = 1.0;
+  const baseX = -0.5;
+  const baseY = -0.5;
+  const baseZ = -0.5;
 
-  // Marching cubes algorithm to generate mesh
-  for (let z = 0; z < worldSize; z++) {
-    for (let y = 0; y < worldSize; y++) {
-      for (let x = 0; x < worldSize; x++) {
-        const voxel = getVoxel(x, y, z);
-        if (voxel > 0) {
-          const size = 1.0;
-          const baseX = x * size;
-          const baseY = y * size;
-          const baseZ = z * size;
-
-          // Check each face of the voxel
-          if (getVoxel(x - 1, y, z) === 0) {
-            addQuad(
-              vertices,
-              infos,
-              [baseX, baseY + size, baseZ],
-              [baseX, baseY + size, baseZ + size],
-              [baseX, baseY, baseZ + size],
-              [baseX, baseY, baseZ],
-              voxel,
-              1 | 4,
-            );
-          }
-          if (getVoxel(x + 1, y, z) === 0) {
-            addQuad(
-              vertices,
-              infos,
-              [baseX + size, baseY + size, baseZ],
-              [baseX + size, baseY + size, baseZ + size],
-              [baseX + size, baseY, baseZ + size],
-              [baseX + size, baseY, baseZ],
-              voxel,
-              1,
-            );
-          }
-          if (getVoxel(x, y - 1, z) === 0) {
-            addQuad(
-              vertices,
-              infos,
-              [baseX, baseY, baseZ],
-              [baseX + size, baseY, baseZ],
-              [baseX + size, baseY, baseZ + size],
-              [baseX, baseY, baseZ + size],
-              voxel,
-              2 | 4,
-            );
-          }
-          if (getVoxel(x, y + 1, z) === 0) {
-            addQuad(
-              vertices,
-              infos,
-              [baseX, baseY + size, baseZ],
-              [baseX, baseY + size, baseZ + size],
-              [baseX + size, baseY + size, baseZ + size],
-              [baseX + size, baseY + size, baseZ],
-              voxel,
-              2,
-            );
-          }
-          if (getVoxel(x, y, z - 1) === 0) {
-            addQuad(
-              vertices,
-              infos,
-              [baseX, baseY + size, baseZ],
-              [baseX + size, baseY + size, baseZ],
-              [baseX + size, baseY, baseZ],
-              [baseX, baseY, baseZ],
-              voxel,
-              3 | 4,
-            );
-          }
-          if (getVoxel(x, y, z + 1) === 0) {
-            addQuad(
-              vertices,
-              infos,
-              [baseX, baseY + size, baseZ + size],
-              [baseX + size, baseY + size, baseZ + size],
-              [baseX + size, baseY, baseZ + size],
-              [baseX, baseY, baseZ + size],
-              voxel,
-              3,
-            );
-          }
-        }
-      }
-    }
-  }
+  addQuad(
+    vertices,
+    infos,
+    [baseX, baseY + size, baseZ],
+    [baseX, baseY + size, baseZ + size],
+    [baseX, baseY, baseZ + size],
+    [baseX, baseY, baseZ],
+    texture,
+    1 | 4,
+  );
+  addQuad(
+    vertices,
+    infos,
+    [baseX + size, baseY + size, baseZ],
+    [baseX + size, baseY + size, baseZ + size],
+    [baseX + size, baseY, baseZ + size],
+    [baseX + size, baseY, baseZ],
+    texture,
+    1,
+  );
+  addQuad(
+    vertices,
+    infos,
+    [baseX, baseY, baseZ],
+    [baseX + size, baseY, baseZ],
+    [baseX + size, baseY, baseZ + size],
+    [baseX, baseY, baseZ + size],
+    texture,
+    2 | 4,
+  );
+  addQuad(
+    vertices,
+    infos,
+    [baseX, baseY + size, baseZ],
+    [baseX, baseY + size, baseZ + size],
+    [baseX + size, baseY + size, baseZ + size],
+    [baseX + size, baseY + size, baseZ],
+    texture,
+    2,
+  );
+  addQuad(
+    vertices,
+    infos,
+    [baseX, baseY + size, baseZ],
+    [baseX + size, baseY + size, baseZ],
+    [baseX + size, baseY, baseZ],
+    [baseX, baseY, baseZ],
+    texture,
+    3 | 4,
+  );
+  addQuad(
+    vertices,
+    infos,
+    [baseX, baseY + size, baseZ + size],
+    [baseX + size, baseY + size, baseZ + size],
+    [baseX + size, baseY, baseZ + size],
+    [baseX, baseY, baseZ + size],
+    texture,
+    3,
+  );
 
   return {
     position: new Float32Array(vertices),
@@ -113,7 +83,11 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
   };
 };
 
-export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: number, voxelData: Uint8Array, emojiTexture: WebGLTexture): Promise<Renderer> => {
+export type Entity = Renderer & {
+  updatePosition: (position: vec3) => void;
+};
+
+export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emojiTexture: WebGLTexture, texture: number): Entity => {
   const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
     const shader = gl.createShader(type);
     if (!shader) {
@@ -183,7 +157,9 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
     throw new Error('Failed to get uniform location');
   }
 
-  let { position, info } = createMesh(voxelData, worldSize);
+  let entityPosition = vec3.create();
+
+  let { position, info } = createMesh(texture);
 
   let positionBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -201,34 +177,18 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
   gl.enableVertexAttribArray(infoAttributeLocation);
   gl.vertexAttribIPointer(infoAttributeLocation, 1, gl.UNSIGNED_INT, 0, 0);
 
-  const updateVoxel = (index: number, value: number) => {
-    voxelData[index] = value;
-    const { position: newPosition, info: newInfo } = createMesh(voxelData, worldSize);
+  const canonicalPos = (pos: vec3, worldSize: number): vec3 => {
+    return pos.map(p => ((p % worldSize) + worldSize) % worldSize) as vec3;
+  }
 
-    gl.deleteBuffer(positionBuffer);
-    const newPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, newPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, newPosition, gl.STATIC_DRAW);
-    positionBuffer = newPositionBuffer;
-    position = newPosition;
-
-    gl.deleteBuffer(infoBuffer);
-    const newInfoBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, newInfoBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, newInfo, gl.STATIC_DRAW);
-    infoBuffer = newInfoBuffer;
-    info = newInfo;
+  const updatePosition = (pos: vec3) => {
+    entityPosition = canonicalPos(pos, worldSize);
   };
 
   const render = (eye: vec3, lookDirection: vec3, renderDistance: number, _rayStep: number) => {
-    gl.clearColor(0.5, 0.6, 0.7, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    eye = canonicalPos(eye, worldSize);
 
     gl.enable(gl.BLEND);
-    // gl.depthFunc(gl.LEQUAL);
-    // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    // gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ZERO);
 
     gl.useProgram(program);
 
@@ -253,10 +213,19 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
     gl.bindTexture(gl.TEXTURE_2D, emojiTexture);
     gl.uniform1i(textureLocation, 0);
 
+    const myself = true;
+
     for (let xOffset = Math.floor((eye[0] - renderDistance) / worldSize) * worldSize; xOffset < eye[0] + renderDistance; xOffset += worldSize) {
       for (let yOffset = Math.floor((eye[1] - renderDistance) / worldSize) * worldSize; yOffset < eye[1] + renderDistance; yOffset += worldSize) {
         for (let zOffset = Math.floor((eye[2] - renderDistance) / worldSize) * worldSize; zOffset < eye[2] + renderDistance; zOffset += worldSize) {
-          gl.uniform3fv(offsetLocation, [xOffset, yOffset, zOffset]);
+          if (myself && xOffset === 0 && yOffset === 0 && zOffset === 0) {
+            continue;
+          }
+          gl.uniform3fv(offsetLocation, [
+            xOffset + entityPosition[0],
+            yOffset + entityPosition[1],
+            zOffset + entityPosition[2],
+          ]);
           gl.drawArrays(gl.TRIANGLES, 0, position.length / 3);
         }
       }
@@ -264,8 +233,9 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
   };
 
   return {
-    voxelData,
+    voxelData: new Uint8Array(),
+    updateVoxel: () => {},
     render,
-    updateVoxel,
+    updatePosition,
   };
 };
