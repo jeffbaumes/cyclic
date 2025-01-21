@@ -57,29 +57,32 @@ export const createEmojiImage = (emoji: string, size: number): Promise<HTMLImage
 };
 
 export const createEmojiTiledImage = async (emojis: string[], tilesPerRow: number, tileSize: number): Promise<HTMLImageElement> => {
-  const rows = Math.ceil(emojis.length / tilesPerRow);
-  const canvas = document.createElement('canvas');
-  canvas.width = tilesPerRow * tileSize;
-  canvas.height = rows * tileSize;
-  const context = canvas.getContext('2d');
+  return new Promise(async (resolve, reject) => {
+    const rows = Math.ceil(emojis.length / tilesPerRow);
+    const canvas = document.createElement('canvas');
+    canvas.width = tilesPerRow * tileSize;
+    canvas.height = rows * tileSize;
+    const context = canvas.getContext('2d');
 
-  if (!context) {
-    throw new Error('Could not get canvas context');
-  }
+    if (!context) {
+      throw new Error('Could not get canvas context');
+    }
 
-  // Clear the canvas to make it transparent
-  // context.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear the canvas to make it transparent
+    // context.clearRect(0, 0, canvas.width, canvas.height);
 
-  for (const [index, emoji] of emojis.entries()) {
-    const img = await createEmojiImage(emoji, tileSize);
-    const x = (index % tilesPerRow) * tileSize;
-    const y = Math.floor(index / tilesPerRow) * tileSize;
-    context.drawImage(img, x, y, tileSize, tileSize);
-  }
+    for (const [index, emoji] of emojis.entries()) {
+      const img = await createEmojiImage(emoji, tileSize);
+      const x = (index % tilesPerRow) * tileSize;
+      const y = Math.floor(index / tilesPerRow) * tileSize;
+      context.drawImage(img, x, y, tileSize, tileSize);
+    }
 
-  const img = new Image();
-  img.src = canvas.toDataURL();
-  return img;
+    const img = new Image();
+    img.src = canvas.toDataURL();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+  });
 };
 
 export const createEmojiTexture = async (gl: WebGL2RenderingContext, emojis: string[], tilesPerRow: number, tileSize: number): Promise<WebGLTexture> => {
