@@ -1,0 +1,21 @@
+{
+  "name": "cyclic-server",
+  "version": "1.0.0",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "ts-node server.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
+    "open-simplex-noise": "^2.5.0",
+    "ts-node": "^10.9.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.14"
+  }
+}

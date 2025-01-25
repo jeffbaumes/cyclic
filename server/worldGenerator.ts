@@ -4,7 +4,7 @@ export const generateVoxelData = (worldSize: number, emojiIndex: Record<string, 
   const noise = makeNoise3D(Date.now());
   const noise4 = makeNoise4D(Date.now());
   const voxelData = new Uint8Array(worldSize * worldSize * worldSize);
-  const scale = 0.001 * worldSize;
+  const scale = 0.01 * worldSize;
   const heightScale = 10;
   const worldType: string = 'terrain';
 

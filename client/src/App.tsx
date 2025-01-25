@@ -5,7 +5,7 @@ import { Renderer } from './types';
 import { createCrosshair } from './crosshair';
 import { createEntity, Entity } from './entity';
 import { createEmojiTexture } from './emojiImage';
-import { generateVoxelData } from './worldGenerator';
+import { encodeMessage, decodeMessage, MessageType } from '../../shared/messages';
 
 enum PlayMode {
   Normal,
@@ -18,6 +18,12 @@ const frac = (a: number) => {
 const mod = (a: number, n: number) => {
   return ((a % n) + n) % n;
 };
+const vec3mod = (out: vec3, a: vec3, n: number) => {
+  out[0] = mod(a[0], n);
+  out[1] = mod(a[1], n);
+  out[2] = mod(a[2], n);
+  return out;
+}
 
 function App() {
   const worldSize = 64;
@@ -91,11 +97,32 @@ function App() {
       };
 
       const handleClick = (event: MouseEvent) => {
+        const intersectAABB = (position: vec3, size: vec3, otherPosition: vec3, otherSize: vec3) => {
+          const closestOtherPosition = vec3.clone(otherPosition);
+          for (let ax = 0; ax < 3; ax += 1) {
+            const diff = position[ax] - otherPosition[ax];
+            if (Math.abs(diff) > worldSize / 2) {
+              closestOtherPosition[ax] += Math.sign(diff) * worldSize;
+            }
+          }
+          for (let ax = 0; ax < 3; ax += 1) {
+            const a0 = position[ax];
+            const a1 = a0 + size[ax];
+            const b0 = closestOtherPosition[ax];
+            const b1 = b0 + otherSize[ax];
+            if (a0 > b1 || a1 < b0) {
+              return false;
+            }
+          }
+          return true;
+        };
+
         if (document.pointerLockElement === canvas) {
           const renderer = rendererRef.current;
           const voxelData = rendererRef.current?.voxelData;
           if (renderer && voxelData) {
             let prevIndex: number | null = null;
+            let prevPos: vec3 | null = null;
             const lookDirection = vec3.fromValues(
               Math.cos(elevationRef.current) * Math.sin(azimuthRef.current),
               Math.sin(elevationRef.current),
@@ -105,16 +132,24 @@ function App() {
             const reach = 20.0;
             for (let t = 0.0; t < reach; t += step) {
               const pos = vec3.scaleAndAdd(vec3.create(), eyeRef.current, lookDirection, t);
-              const wrappedPos = pos.map(p => mod(Math.floor(p), worldSize));
+              const wrappedPos = vec3mod(vec3.create(), vec3.floor(vec3.create(), pos), worldSize);
               const index = wrappedPos[0] + wrappedPos[1] * worldSize + wrappedPos[2] * worldSize * worldSize;
               if (voxelData[index] > 0) {
                 if (event.button === 0) {
                   renderer.updateVoxel(index, 0);
-                } else if (event.button === 2 && prevIndex !== null) {
-                  renderer.updateVoxel(prevIndex, 4);
+                } else if (event.button === 2 && prevIndex !== null && prevPos !== null) {
+                  const foot = vec3.clone(eyeRef.current);
+                  foot[0] -= playerWidth / 2;
+                  foot[1] -= playerEyeHeight;
+                  foot[2] -= playerWidth / 2;
+                  const size = vec3.fromValues(playerWidth, playerHeight, playerWidth);
+                  if (!intersectAABB(foot, size, prevPos, vec3.fromValues(1, 1, 1))) {
+                    renderer.updateVoxel(prevIndex, 4);
+                  }
                 }
                 break;
               }
+              prevPos = vec3.clone(wrappedPos);
               prevIndex = index;
             }
           }
@@ -155,10 +190,30 @@ function App() {
         const emojiIndex = {} as Record<string, number>;
         emoji.map((emoji, index) => emojiIndex[emoji] = index);
 
-        const voxelData = generateVoxelData(worldSize, emojiIndex);
+        const socket = new WebSocket('ws://localhost:8080');
+        socket.binaryType = "arraybuffer";
 
-        createMeshRenderer(gl, worldSize, voxelData, emojiTexture).then((renderer) => {
-          rendererRef.current = renderer;
+        socket.addEventListener('open', () => {
+          socket.send(encodeMessage({type: MessageType.Connect, user: 'abc', world: 'def'}));
+        });
+
+        socket.addEventListener('message', (event) => {
+          const m = decodeMessage(event.data);
+          if (m.type !== MessageType.WorldData) {
+            console.error('Unexpected message type:', m.type);
+            return;
+          }
+          createMeshRenderer(gl, worldSize, m.data, emojiTexture).then((renderer) => {
+            rendererRef.current = renderer;
+          });
+        });
+
+        socket.addEventListener('close', () => {
+          console.log('Disconnected from WebSocket server');
+        });
+
+        socket.addEventListener('error', (error) => {
+          console.error('WebSocket error:', error);
         });
 
         entityRef.current = createEntity(gl, worldSize, emojiTexture, 0);
@@ -294,6 +349,7 @@ function App() {
         vec3.add(velocityRef.current, velocityRef.current, forwardMovement);
         vec3.add(velocityRef.current, velocityRef.current, upMovement);
         vec3.add(eyeRef.current, eyeRef.current, velocityRef.current);
+        vec3mod(eyeRef.current, eyeRef.current, worldSize);
 
         const foot = vec3.clone(eyeRef.current);
         foot[0] -= playerWidth / 2;
