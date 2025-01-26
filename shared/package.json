@@ -9,6 +9,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@msgpack/msgpack": "^3.0.0-beta2"
+    "@msgpack/msgpack": "^3.0.0-beta2",
+    "gl-matrix": "^3.4.3",
+    "open-simplex-noise": "^2.5.0"
   }
 }

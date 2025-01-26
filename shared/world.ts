@@ -1,6 +1,7 @@
+
 import { makeNoise3D, makeNoise4D } from 'open-simplex-noise';
 
-export const generateVoxelData = (worldSize: number, emojiIndex: Record<string, number>): Uint8Array => {
+const generateVoxelData = (worldSize: number, emojiIndex: Record<string, number>): Uint8Array => {
   const noise = makeNoise3D(Date.now());
   const noise4 = makeNoise4D(Date.now());
   const voxelData = new Uint8Array(worldSize * worldSize * worldSize);
@@ -51,3 +52,17 @@ export const generateVoxelData = (worldSize: number, emojiIndex: Record<string, 
 
   return voxelData;
 };
+
+export const generateWorld = (worldSize: number) => {
+  const emoji = ['😊', '🌿', '🌳', '🐄', '🪵', '🪨'];
+  const emojiIndex = {} as Record<string, number>;
+  emoji.map((emoji, index) => emojiIndex[emoji] = index);
+
+  const voxelData = generateVoxelData(worldSize, emojiIndex);
+
+  return {
+    token: Math.random().toString(36).slice(2),
+    voxelData,
+    players: {},
+  }
+}

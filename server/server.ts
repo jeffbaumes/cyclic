@@ -1,35 +1,31 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { generateVoxelData } from './worldGenerator';
-import { ConnectMessage, decodeMessage, encodeMessage, MessageType } from '../shared/messages';
+import { decodeMessage, encodeMessage } from '../shared/messages';
+import { createLocalServerConnection } from '../shared/serverConnection';
+import { createFileBlobStorage } from './storage';
 
-const wss = new WebSocketServer({ port: 8080 });
+const main = async () => {
+  const wss = new WebSocketServer({ port: 8080 });
 
-type ClientSession = {
-  user: string;
-  world: string;
+  const users = await createFileBlobStorage("./data/users");
+  const worlds = await createFileBlobStorage("./data/worlds");
+
+  wss.on('connection', async (ws: WebSocket) => {
+    const localConn = await createLocalServerConnection((message) => {
+      ws.send(encodeMessage(message));
+    }, users, worlds);
+
+    ws.on('message', (data) => {
+      ws.binaryType = "arraybuffer";
+      if (Array.isArray(data) || typeof data === "string") {
+        console.error("Unhandled message format");
+        return;
+      }
+      if (Buffer.isBuffer(data)) {
+        data = new Uint8Array(data);
+      }
+      localConn.send(decodeMessage(data));
+    });
+  });
 };
 
-const sessions = new Map<WebSocket, ClientSession>();
-
-wss.on('connection', (ws: WebSocket) => {
-  ws.on('message', (data) => {
-    ws.binaryType = "arraybuffer";
-    if (Array.isArray(data) || typeof data === "string") {
-      // Not handling these types
-      console.error("Unhandled message format");
-      return;
-    }
-    const m = decodeMessage(data);
-    if (!sessions.has(ws)) {
-      const {user, world} = m as ConnectMessage;
-      sessions.set(ws, { user, world });
-
-      const emoji = ['😊', '🌿', '🌳', '🐄', '🪵', '🪨'];
-      const emojiIndex = {} as Record<string, number>;
-      emoji.map((emoji, index) => emojiIndex[emoji] = index);
-
-      const voxelData = generateVoxelData(64, emojiIndex);
-      ws.send(encodeMessage({ type: MessageType.WorldData, data: voxelData }));
-    }
-  });
-});
+main();

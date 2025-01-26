@@ -1,22 +1,75 @@
 import { encode, decode } from '@msgpack/msgpack';
+import { vec3 } from "gl-matrix";
+
+export type World = {
+  token: string;
+  voxelData: Uint8Array;
+  players: Record<string, {
+    position: vec3;
+    lookDirection: vec3;
+  }>;
+};
 
 export enum MessageType {
-  Connect = 1,
-  WorldData = 2,
+  Register,
+  Login,
+  LoginStatus,
+  NewWorld,
+  JoinWorld,
+  WorldData,
+  ListWorlds,
+  WorldList,
+};
+
+export type RegisterMessage = {
+  type: MessageType.Register;
+  username: string;
+};
+
+export type LoginMessage = {
+  type: MessageType.Login;
+  token: string;
+};
+
+export type LoginStatusMessage = {
+  type: MessageType.LoginStatus;
+  username: string;
+  token: string;
+  status: 'success' | 'failure';
+};
+
+export type NewWorldMessage = {
+  type: MessageType.NewWorld;
+};
+
+export type JoinWorldMessage = {
+  type: MessageType.JoinWorld;
+  token: string;
 };
 
 export type WorldMessage = {
   type: MessageType.WorldData;
-  data: Uint8Array;
+  world: World;
 };
 
-export type ConnectMessage = {
-  type: MessageType.Connect;
-  user: string;
-  world: string;
+export type ListWorldsMessage = {
+  type: MessageType.ListWorlds;
 };
 
-export type Message = ConnectMessage | WorldMessage;
+export type WorldListMessage = {
+  type: MessageType.WorldList;
+  data: string[];
+};
+
+export type Message =
+  RegisterMessage
+  | LoginMessage
+  | LoginStatusMessage
+  | NewWorldMessage
+  | JoinWorldMessage
+  | WorldMessage
+  | ListWorldsMessage
+  | WorldListMessage;
 
 export const encodeMessage = (message: Message): ArrayBuffer => {
   return encode(message);
