@@ -5,7 +5,7 @@ import { createCrosshair } from './crosshair';
 import { createEntity, Entity } from './entity';
 import { createEmojiTexture } from './emojiImage';
 import { Message, MessageType } from '../../shared/messages';
-import { createLocalServerConnection, createWebSocketServerConnection } from '../../shared/serverConnection';
+import { createLocalServerConnection, createWebSocketServerConnection, ServerConnection } from '../../shared/serverConnection';
 import { createIndexedDBBlobStorage } from './storage';
 import './index.css';
 
@@ -172,29 +172,41 @@ const init = async () => {
   const emojiIndex = {} as Record<string, number>;
   emoji.map((emoji, index) => emojiIndex[emoji] = index);
 
-  const onMessage = (m: Message) => {
-    console.log(m);
-    if (m.type !== MessageType.WorldData) {
-      console.error('Unexpected message type:', m.type);
+  const onMessage = async (m: Message) => {
+    if (conn === null) {
+      console.error('Connection is null');
       return;
     }
-    createMeshRenderer(gl, worldSize, m.world.voxelData, emojiTexture).then((r) => {
-      renderer = r;
-    });
+    switch (m.type) {
+      case MessageType.WorldList:
+        console.log('Worlds:', m.worlds);
+        if (m.worlds.length > 0) {
+          conn.send({ type: MessageType.JoinWorld, token: m.worlds[0] });
+        } else {
+          conn.send({ type: MessageType.NewWorld });
+        }
+        break;
+      case MessageType.WorldData:
+        console.log('World:', m.world);
+        renderer = await createMeshRenderer(gl, worldSize, m.world.voxelData, emojiTexture);
+        break;
+      default:
+        console.log('Unhandled message:', m);
+        break;
+    }
   };
 
-  let conn = null;
+  let conn = null as ServerConnection | null;
   try {
     conn = await createWebSocketServerConnection('ws://localhost:8080', onMessage);
-    conn.send({ type: MessageType.NewWorld });
     console.log('Connected to server');
   } catch (e) {
     const worlds = createIndexedDBBlobStorage('worlds');
     const users = createIndexedDBBlobStorage('users');
     conn = createLocalServerConnection(onMessage, worlds, users);
-    conn.send({ type: MessageType.NewWorld });
     console.log('Connected to local server');
   }
+  conn.send({ type: MessageType.ListWorlds });
 
   entity = createEntity(gl, worldSize, emojiTexture, 0);
 

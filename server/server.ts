@@ -12,7 +12,7 @@ const main = async () => {
   wss.on('connection', async (ws: WebSocket) => {
     const localConn = await createLocalServerConnection((message) => {
       ws.send(encodeMessage(message));
-    }, users, worlds);
+    }, worlds, users);
 
     ws.on('message', (data) => {
       ws.binaryType = "arraybuffer";

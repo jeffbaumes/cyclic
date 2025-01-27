@@ -55,10 +55,11 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
         case MessageType.Login:
           break;
         case MessageType.ListWorlds:
-          sendToClient({ type: MessageType.WorldList, data: await worlds.list() });
+          sendToClient({ type: MessageType.WorldList, worlds: await worlds.list() });
           break;
         case MessageType.NewWorld:
           world = await generateWorld(64);
+          worlds.save(world.token, msgpack.encode(world));
           sendToClient({ type: MessageType.WorldData, world });
           break;
         case MessageType.JoinWorld:

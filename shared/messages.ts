@@ -58,7 +58,7 @@ export type ListWorldsMessage = {
 
 export type WorldListMessage = {
   type: MessageType.WorldList;
-  data: string[];
+  worlds: string[];
 };
 
 export type Message =
