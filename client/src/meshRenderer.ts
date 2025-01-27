@@ -24,20 +24,14 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
       for (let x = 0; x < worldSize; x++) {
         const voxel = getVoxel(x, y, z);
         if (voxel > 0) {
-          const size = 1.0;
-          const baseX = x * size;
-          const baseY = y * size;
-          const baseZ = z * size;
-
-          // Check each face of the voxel
           if (getVoxel(x - 1, y, z) === 0) {
             addQuad(
               vertices,
               infos,
-              [baseX, baseY + size, baseZ],
-              [baseX, baseY + size, baseZ + size],
-              [baseX, baseY, baseZ + size],
-              [baseX, baseY, baseZ],
+              [x, y + 1, z],
+              [x, y + 1, z + 1],
+              [x, y, z + 1],
+              [x, y, z],
               voxel,
               1 | 4,
             );
@@ -46,10 +40,10 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
             addQuad(
               vertices,
               infos,
-              [baseX + size, baseY + size, baseZ],
-              [baseX + size, baseY + size, baseZ + size],
-              [baseX + size, baseY, baseZ + size],
-              [baseX + size, baseY, baseZ],
+              [x + 1, y + 1, z],
+              [x + 1, y + 1, z + 1],
+              [x + 1, y, z + 1],
+              [x + 1, y, z],
               voxel,
               1,
             );
@@ -58,10 +52,10 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
             addQuad(
               vertices,
               infos,
-              [baseX, baseY, baseZ],
-              [baseX + size, baseY, baseZ],
-              [baseX + size, baseY, baseZ + size],
-              [baseX, baseY, baseZ + size],
+              [x, y, z],
+              [x + 1, y, z],
+              [x + 1, y, z + 1],
+              [x, y, z + 1],
               voxel,
               2 | 4,
             );
@@ -70,10 +64,10 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
             addQuad(
               vertices,
               infos,
-              [baseX, baseY + size, baseZ],
-              [baseX, baseY + size, baseZ + size],
-              [baseX + size, baseY + size, baseZ + size],
-              [baseX + size, baseY + size, baseZ],
+              [x, y + 1, z],
+              [x, y + 1, z + 1],
+              [x + 1, y + 1, z + 1],
+              [x + 1, y + 1, z],
               voxel,
               2,
             );
@@ -82,10 +76,10 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
             addQuad(
               vertices,
               infos,
-              [baseX, baseY + size, baseZ],
-              [baseX + size, baseY + size, baseZ],
-              [baseX + size, baseY, baseZ],
-              [baseX, baseY, baseZ],
+              [x, y + 1, z],
+              [x + 1, y + 1, z],
+              [x + 1, y, z],
+              [x, y, z],
               voxel,
               3 | 4,
             );
@@ -94,10 +88,10 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
             addQuad(
               vertices,
               infos,
-              [baseX, baseY + size, baseZ + size],
-              [baseX + size, baseY + size, baseZ + size],
-              [baseX + size, baseY, baseZ + size],
-              [baseX, baseY, baseZ + size],
+              [x, y + 1, z + 1],
+              [x + 1, y + 1, z + 1],
+              [x + 1, y, z + 1],
+              [x, y, z + 1],
               voxel,
               3,
             );
