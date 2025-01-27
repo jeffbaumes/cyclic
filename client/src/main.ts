@@ -188,6 +188,13 @@ const init = async () => {
         break;
       case MessageType.WorldData:
         console.log('World:', m.world);
+        if (m.world === null) {
+          console.log('World is null');
+          return;
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set('world', m.world.token);
+        window.history.replaceState({}, '', url.toString());
         renderer = await createMeshRenderer(gl, worldSize, m.world.voxelData, emojiTexture);
         break;
       default:
@@ -206,7 +213,13 @@ const init = async () => {
     conn = createLocalServerConnection(onMessage, worlds, users);
     console.log('Connected to local server');
   }
-  conn.send({ type: MessageType.ListWorlds });
+  const urlParams = new URLSearchParams(window.location.search);
+  const worldToken = urlParams.get('world');
+  if (worldToken) {
+    conn.send({ type: MessageType.JoinWorld, token: worldToken });
+  } else {
+    conn.send({ type: MessageType.ListWorlds });
+  }
 
   entity = createEntity(gl, worldSize, emojiTexture, 0);
 

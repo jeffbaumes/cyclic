@@ -49,7 +49,7 @@ export type JoinWorldMessage = {
 
 export type WorldMessage = {
   type: MessageType.WorldData;
-  world: World;
+  world: World | null;
 };
 
 export type ListWorldsMessage = {

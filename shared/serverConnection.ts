@@ -66,8 +66,12 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
           if (world !== null) {
             worlds.save(world.token, msgpack.encode(world));
           }
-          world = msgpack.decode(await worlds.load(data.token)) as World;
-          sendToClient({ type: MessageType.WorldData, world });
+          try {
+            world = msgpack.decode(await worlds.load(data.token)) as World;
+            sendToClient({ type: MessageType.WorldData, world });
+          } catch (error) {
+            sendToClient({ type: MessageType.WorldData, world: null });
+          }
           break;
         default:
           throw new Error("Not implemented");
