@@ -1,12 +1,13 @@
 import { encode, decode } from '@msgpack/msgpack';
-import { vec3 } from "gl-matrix";
 
 export type World = {
   token: string;
-  voxelData: Uint8Array;
-  players: Record<string, {
-    position: vec3;
-    lookDirection: vec3;
+  voxels: Uint8Array;
+  users: Record<string, {
+    pos: number[];
+    azimuth: number;
+    elevation: number;
+    vel: number[];
   }>;
 };
 
@@ -20,6 +21,7 @@ export enum MessageType {
   ListWorlds,
   WorldList,
   UpdateVoxel,
+  UserMove,
 };
 
 export type RegisterMessage = {
@@ -68,6 +70,15 @@ export type UpdateVoxelMessage = {
   value: number;
 };
 
+export type UserMoveMessage = {
+  type: MessageType.UserMove;
+  username: string;
+  pos: number[];
+  azimuth: number;
+  elevation: number;
+  vel: number[];
+};
+
 export type Message =
   RegisterMessage
   | LoginMessage
@@ -77,7 +88,8 @@ export type Message =
   | WorldMessage
   | ListWorldsMessage
   | WorldListMessage
-  | UpdateVoxelMessage;
+  | UpdateVoxelMessage
+  | UserMoveMessage;
 
 export const encodeMessage = (message: Message): ArrayBuffer => {
   return encode(message);

@@ -4,7 +4,7 @@ import { Renderer } from './types';
 import { mat4, vec3 } from 'gl-matrix';
 import { addQuad } from './quad';
 
-const createMesh = (voxelData: Uint8Array, worldSize: number): {
+const createMesh = (voxels: Uint8Array, worldSize: number): {
   position: Float32Array,
   info: Uint32Array,
 } => {
@@ -15,7 +15,7 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
     const wrappedX = (x + worldSize) % worldSize;
     const wrappedY = (y + worldSize) % worldSize;
     const wrappedZ = (z + worldSize) % worldSize;
-    return voxelData[wrappedX + wrappedY * worldSize + wrappedZ * worldSize * worldSize];
+    return voxels[wrappedX + wrappedY * worldSize + wrappedZ * worldSize * worldSize];
   };
 
   // Marching cubes algorithm to generate mesh
@@ -107,7 +107,7 @@ const createMesh = (voxelData: Uint8Array, worldSize: number): {
   };
 };
 
-export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: number, voxelData: Uint8Array, emojiTexture: WebGLTexture): Promise<Renderer> => {
+export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: number, voxels: Uint8Array, emojiTexture: WebGLTexture): Promise<Renderer> => {
   const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
     const shader = gl.createShader(type);
     if (!shader) {
@@ -172,12 +172,16 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
   if (offsetLocation === null) {
     throw new Error('Failed to get uniform location');
   }
+  const rotationLocation = gl.getUniformLocation(program, 'u_rotation');
+  if (rotationLocation === null) {
+    throw new Error('Failed to get uniform location');
+  }
   const textureLocation = gl.getUniformLocation(program, 'u_texture');
   if (textureLocation === null) {
     throw new Error('Failed to get uniform location');
   }
 
-  let { position, info } = createMesh(voxelData, worldSize);
+  let { position, info } = createMesh(voxels, worldSize);
 
   let positionBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -196,8 +200,8 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
   gl.vertexAttribIPointer(infoAttributeLocation, 1, gl.UNSIGNED_INT, 0, 0);
 
   const updateVoxel = (index: number, value: number) => {
-    voxelData[index] = value;
-    const { position: newPosition, info: newInfo } = createMesh(voxelData, worldSize);
+    voxels[index] = value;
+    const { position: newPosition, info: newInfo } = createMesh(voxels, worldSize);
 
     gl.deleteBuffer(positionBuffer);
     const newPositionBuffer = gl.createBuffer();
@@ -242,6 +246,7 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
     gl.uniformMatrix4fv(modelViewProjectionMatrixLocation, false, modelViewProjectionMatrix);
     gl.uniform1f(renderDistanceLocation, renderDistance);
     gl.uniform3fv(eyeLocation, eye);
+    gl.uniformMatrix4fv(rotationLocation, false, mat4.create());
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, emojiTexture);
@@ -258,7 +263,7 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
   };
 
   return {
-    voxelData,
+    voxels,
     render,
     updateVoxel,
   };

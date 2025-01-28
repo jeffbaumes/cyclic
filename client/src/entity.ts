@@ -85,6 +85,7 @@ const createMesh = (texture: number): {
 
 export type Entity = Renderer & {
   updatePosition: (position: vec3) => void;
+  updateLook: (azimuth: number, altitude: number) => void;
 };
 
 export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emojiTexture: WebGLTexture, texture: number): Entity => {
@@ -152,12 +153,17 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
   if (offsetLocation === null) {
     throw new Error('Failed to get uniform location');
   }
+  const rotationLocation = gl.getUniformLocation(program, 'u_rotation');
+  if (rotationLocation === null) {
+    throw new Error('Failed to get uniform location');
+  }
   const textureLocation = gl.getUniformLocation(program, 'u_texture');
   if (textureLocation === null) {
     throw new Error('Failed to get uniform location');
   }
 
   let entityPosition = vec3.create();
+  let entityRotation = mat4.identity(mat4.create());
 
   let { position, info } = createMesh(texture);
 
@@ -183,6 +189,11 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
 
   const updatePosition = (pos: vec3) => {
     entityPosition = canonicalPos(pos, worldSize);
+  };
+
+  const updateLook = (azimuth: number, altitude: number) => {
+    entityRotation = mat4.rotateX(mat4.create(), mat4.create(), altitude);
+    entityRotation = mat4.rotateY(entityRotation, entityRotation, azimuth);
   };
 
   const render = (eye: vec3, lookDirection: vec3, renderDistance: number, _rayStep: number) => {
@@ -213,14 +224,11 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
     gl.bindTexture(gl.TEXTURE_2D, emojiTexture);
     gl.uniform1i(textureLocation, 0);
 
-    const myself = true;
+    gl.uniformMatrix4fv(rotationLocation, false, entityRotation);
 
     for (let xOffset = Math.floor((eye[0] - renderDistance) / worldSize) * worldSize; xOffset < eye[0] + renderDistance; xOffset += worldSize) {
       for (let yOffset = Math.floor((eye[1] - renderDistance) / worldSize) * worldSize; yOffset < eye[1] + renderDistance; yOffset += worldSize) {
         for (let zOffset = Math.floor((eye[2] - renderDistance) / worldSize) * worldSize; zOffset < eye[2] + renderDistance; zOffset += worldSize) {
-          if (myself && xOffset === 0 && yOffset === 0 && zOffset === 0) {
-            continue;
-          }
           gl.uniform3fv(offsetLocation, [
             xOffset + entityPosition[0],
             yOffset + entityPosition[1],
@@ -233,9 +241,10 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
   };
 
   return {
-    voxelData: new Uint8Array(),
+    voxels: new Uint8Array(),
     updateVoxel: () => {},
     render,
     updatePosition,
+    updateLook,
   };
 };

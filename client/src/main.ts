@@ -45,10 +45,13 @@ const up = vec3.fromValues(0, 1, 0);
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 
 let conn = null as ServerConnection | null;
+let username = '';
+let world = null as string | null;
 let renderer = null as Renderer | null;
-let entity = null as Entity | null;
+let entities: { [token: string]: Entity } = {};
 let crosshair = null as Renderer | null;
 let lastTime = 0;
+let lastMoveUpdateTime = 0;
 let eye = vec3.fromValues(0, 0.75 * worldSize, 0);
 let azimuth = 0.0;
 let elevation = 0.0;
@@ -117,8 +120,8 @@ const handleClick = (event: MouseEvent) => {
   };
 
   if (document.pointerLockElement === canvas) {
-    const voxelData = renderer?.voxelData;
-    if (renderer && voxelData) {
+    const voxels = renderer?.voxels;
+    if (renderer && voxels) {
       let prevIndex: number | null = null;
       let prevPos: vec3 | null = null;
       const lookDirection = vec3.fromValues(
@@ -132,7 +135,7 @@ const handleClick = (event: MouseEvent) => {
         const pos = vec3.scaleAndAdd(vec3.create(), eye, lookDirection, t);
         const wrappedPos = vec3mod(vec3.create(), vec3.floor(vec3.create(), pos), worldSize);
         const index = wrappedPos[0] + wrappedPos[1] * worldSize + wrappedPos[2] * worldSize * worldSize;
-        if (voxelData[index] > 0) {
+        if (voxels[index] > 0) {
           if (event.button === 0) {
             conn.send({ type: MessageType.UpdateVoxel, index, value: 0 });
             renderer.updateVoxel(index, 0);
@@ -199,12 +202,39 @@ const init = async () => {
     }
   });
 
+  const registerDialog = document.getElementById('registerDialog') as HTMLDialogElement;
+  const usernameInput = document.getElementById('usernameInput') as HTMLInputElement;
+  const registerButton = document.getElementById('registerButton') as HTMLButtonElement;
+
+  registerButton.addEventListener('click', () => {
+    if (conn) {
+      conn.send({ type: MessageType.Register, username: usernameInput.value });
+      registerDialog.close();
+    }
+  });
+
   const onMessage = async (m: Message) => {
     if (conn === null) {
       console.error('Connection is null');
       return;
     }
     switch (m.type) {
+      case MessageType.LoginStatus:
+        if (m.status === 'success') {
+          localStorage.setItem('user', m.token);
+          username = m.username;
+          const urlParams = new URLSearchParams(window.location.search);
+          const worldToken = urlParams.get('world');
+          if (worldToken) {
+            conn.send({ type: MessageType.JoinWorld, token: worldToken });
+          } else {
+            conn.send({ type: MessageType.ListWorlds });
+          }
+        } else {
+          console.log('Login failed');
+          localStorage.removeItem('user');
+        }
+        break;
       case MessageType.WorldList:
         worldSelect.innerHTML = '';
         m.worlds.forEach(world => {
@@ -216,15 +246,28 @@ const init = async () => {
         worldDialog.showModal();
         break;
       case MessageType.WorldData:
-        console.log('World:', m.world);
         if (m.world === null) {
-          console.log('World is null');
+          console.log('Could not load world');
           return;
         }
+        world = m.world.token;
         const url = new URL(window.location.href);
         url.searchParams.set('world', m.world.token);
         window.history.replaceState({}, '', url.toString());
-        renderer = await createMeshRenderer(gl, worldSize, m.world.voxelData, emojiTexture);
+        renderer = await createMeshRenderer(gl, worldSize, m.world.voxels, emojiTexture);
+        entities[username] = createEntity(gl, worldSize, emojiTexture, 0);
+        break;
+      case MessageType.UpdateVoxel:
+        if (renderer) {
+          renderer.updateVoxel(m.index, m.value);
+        }
+        break;
+      case MessageType.UserMove:
+        if (!entities[m.username]) {
+          entities[m.username] = createEntity(gl, worldSize, emojiTexture, 0);
+        }
+        entities[m.username].updatePosition(vec3.fromValues(m.pos[0], m.pos[1], m.pos[2]));
+        entities[m.username].updateLook(m.azimuth, m.elevation);
         break;
       default:
         console.log('Unhandled message:', m);
@@ -241,18 +284,16 @@ const init = async () => {
   } else {
     const worlds = createIndexedDBBlobStorage('worlds');
     const users = createIndexedDBBlobStorage('users');
-    conn = createLocalServerConnection(onMessage, () => {}, worlds, users);
+    conn = createLocalServerConnection(onMessage, (_world, m) => onMessage(m), worlds, users);
     console.log('Connected to local server');
   }
 
-  const worldToken = urlParams.get('world');
-  if (worldToken) {
-    conn.send({ type: MessageType.JoinWorld, token: worldToken });
+  const user = localStorage.getItem('user');
+  if (user) {
+    conn.send({ type: MessageType.Login, token: user });
   } else {
-    conn.send({ type: MessageType.ListWorlds });
+    registerDialog.showModal();
   }
-
-  entity = createEntity(gl, worldSize, emojiTexture, 0);
 
   crosshair = createCrosshair(gl);
 
@@ -280,9 +321,9 @@ const collideRoundedBox = (position: vec3, size: vec3, corner: number) => {
         for (let s2 = 0; s2 < samples2; s2 += 1) {
           point[ax0] = position[ax0] + side*size[ax0];
           point[ax2] = position[ax2] + corner + s2*delta2;
-          const voxelData = renderer?.voxelData;
+          const voxels = renderer?.voxels;
           const index = Math.floor(mod(point[0], worldSize)) + Math.floor(mod(point[1], worldSize)) * worldSize + Math.floor(mod(point[2], worldSize)) * worldSize * worldSize;
-          const type = voxelData ? voxelData[index] : 0;
+          const type = voxels ? voxels[index] : 0;
           if (type !== 0 && type !== null) {
             let change = 0.0;
             if (side === 1) {
@@ -406,11 +447,31 @@ const update = (time: number) => {
   let deltaTime = (time - lastTime) / 1000;
   lastTime = time;
 
+  if (!world) {
+    requestAnimationFrame(update);
+    return;
+  }
+
   while (deltaTime > 1.1/60.0) {
     movePlayer(1.1/60.0);
     deltaTime -= 1.1/60.0;
   }
   movePlayer(deltaTime);
+
+  let deltaMoveUpdateTime = time - lastMoveUpdateTime;
+  if (deltaMoveUpdateTime > 1.0/10.0) {
+    lastMoveUpdateTime = time;
+    if (conn) {
+      conn.send({
+        type: MessageType.UserMove,
+        username,
+        pos: [eye[0], eye[1], eye[2]],
+        azimuth,
+        elevation,
+        vel: [velocity[0], velocity[1], velocity[2]],
+      });
+    }
+  }
 
   const lookDirection = vec3.fromValues(
     Math.cos(elevation) * Math.sin(azimuth),
@@ -421,9 +482,11 @@ const update = (time: number) => {
   if (renderer) {
     renderer.render(eye, lookDirection, 150, 0.01);
   }
-  if (entity) {
-    entity.updatePosition(eye);
-    entity.render(eye, lookDirection, 150, 0.01);
+  for (const name in entities) {
+    if (name !== username) {
+      const entity = entities[name];
+      entity.render(eye, lookDirection, 150, 0.01);
+    }
   }
   if (crosshair) {
     crosshair.render(eye, lookDirection, 150, 0.01);

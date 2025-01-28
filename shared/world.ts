@@ -58,11 +58,11 @@ export const generateWorld = (worldSize: number) => {
   const emojiIndex = {} as Record<string, number>;
   emoji.map((emoji, index) => emojiIndex[emoji] = index);
 
-  const voxelData = generateVoxelData(worldSize, emojiIndex);
+  const voxels = generateVoxelData(worldSize, emojiIndex);
 
   return {
     token: Math.random().toString(36).slice(2),
-    voxelData,
-    players: {},
+    voxels,
+    users: {},
   }
 }

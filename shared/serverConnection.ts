@@ -3,12 +3,18 @@ import { BlobStorage } from "./storage";
 import { generateWorld } from "./world";
 import * as msgpack from "@msgpack/msgpack";
 
+export type User = {
+  username: string;
+  token: string;
+};
+
 export type ServerConnection = {
   send: (data: Message) => Promise<void>;
 };
 
 export type LocalServerConnection = ServerConnection & {
   currentWorld: () => World | null;
+  currentUser: () => User | null;
 };
 
 export const createWebSocketServerConnection = async (url: string, sendToClient: (data: Message) => void) => {
@@ -51,12 +57,23 @@ export const createWebSocketServerConnection = async (url: string, sendToClient:
 
 export const createLocalServerConnection = (sendToClient: (data: Message) => void, sendToWorld: (world: string, data: Message) => void, worlds: BlobStorage, users: BlobStorage) => {
   let world = null as World | null;
+  let user = null as User | null;
   return {
-    send: async (data: Message) => {
-      switch (data.type) {
+    send: async (m: Message) => {
+      switch (m.type) {
         case MessageType.Register:
+          const token = Math.random().toString(36).slice(2);
+          users.save(token, msgpack.encode({ username: m.username }));
+          sendToClient({ type: MessageType.LoginStatus, username: m.username, token, status: "success" });
           break;
         case MessageType.Login:
+          try {
+            user = msgpack.decode(await users.load(m.token)) as User;
+          } catch (error) {
+            sendToClient({ type: MessageType.LoginStatus, username: "", token: "", status: "failure" });
+            return;
+          }
+          sendToClient({ type: MessageType.LoginStatus, username: user.username, token: m.token, status: "success" });
           break;
         case MessageType.ListWorlds:
           sendToClient({ type: MessageType.WorldList, worlds: await worlds.list() });
@@ -71,7 +88,7 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
             worlds.save(world.token, msgpack.encode(world));
           }
           try {
-            world = msgpack.decode(await worlds.load(data.token)) as World;
+            world = msgpack.decode(await worlds.load(m.token)) as World;
             sendToClient({ type: MessageType.WorldData, world });
           } catch (error) {
             sendToClient({ type: MessageType.WorldData, world: null });
@@ -81,8 +98,22 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
           if (world === null) {
             throw new Error("No world loaded");
           }
-          world.voxelData[data.index] = data.value;
-          sendToWorld(world.token, data);
+          world.voxels[m.index] = m.value;
+          sendToWorld(world.token, m);
+          worlds.save(world.token, msgpack.encode(world));
+          break;
+        case MessageType.UserMove:
+          if (world === null) {
+            throw new Error("No world loaded");
+          }
+          if (world.users[m.username] === undefined) {
+            world.users[m.username] = { pos: [0, 0, 0], azimuth: 0, elevation: 0, vel: [0, 0, 0] };
+          }
+          world.users[m.username].pos = m.pos;
+          world.users[m.username].azimuth = m.azimuth;
+          world.users[m.username].elevation = m.elevation;
+          world.users[m.username].vel = m.vel;
+          sendToWorld(world.token, m);
           worlds.save(world.token, msgpack.encode(world));
           break;
         default:
@@ -90,5 +121,6 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
       }
     },
     currentWorld: () => world,
+    currentUser: () => user,
   }
 };

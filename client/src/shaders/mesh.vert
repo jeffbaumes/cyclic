@@ -3,6 +3,7 @@ in vec3 a_position;
 in uint a_info;
 uniform mat4 u_modelViewProjectionMatrix;
 uniform vec3 u_eye;
+uniform mat4 u_rotation;
 uniform vec3 u_offset;
 uniform sampler2D u_texture;
 
@@ -40,9 +41,9 @@ void main() {
   info = info >> 4u;
   uint texIndex = info;
 
-  vec3 pos = a_position + u_offset;
+  vec3 pos = (u_rotation * vec4(a_position, 1.0)).xyz + u_offset;
   gl_Position = u_modelViewProjectionMatrix * vec4(pos, 1.0);
-  v_distance = length(pos - u_eye);
+  v_distance = length(pos.xyz - u_eye);
   vec2 texSize = floor(vec2(textureSize(u_texture, 0)) / 64.0);
   vec2 texOffset = vec2(mod(float(texIndex), texSize.x), floor(float(texIndex) / texSize.x));
   float inset = 1.0 / 64.0;
