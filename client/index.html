@@ -5,11 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cyclic</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   </head>
-  <body>
+  <body class="bg-gray-900 text-white">
     <div class="w-screen h-screen flex items-center justify-center absolute top-0 left-0">
       <canvas id="canvas" class="w-full h-full"></canvas>
     </div>
+    <dialog id="worldDialog" class="bg-gray-700 rounded-lg p-6 shadow-lg">
+      <form method="dialog" class="space-y-4">
+        <p class="text-lg font-semibold">Select a world:</p>
+        <select id="worldSelect" class="w-full p-2 bg-gray-600 border border-gray-500 rounded">
+          <!-- Options will be populated dynamically -->
+        </select>
+        <menu class="flex space-x-4">
+          <button id="joinWorldButton" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Join</button>
+          <button id="newWorldButton" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700">Create New World</button>
+        </menu>
+      </form>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

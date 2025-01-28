@@ -7,6 +7,10 @@ export type ServerConnection = {
   send: (data: Message) => Promise<void>;
 };
 
+export type LocalServerConnection = ServerConnection & {
+  currentWorld: () => World | null;
+};
+
 export const createWebSocketServerConnection = async (url: string, sendToClient: (data: Message) => void) => {
   return new Promise<ServerConnection>(async (resolve, reject) => {
     try {
@@ -45,7 +49,7 @@ export const createWebSocketServerConnection = async (url: string, sendToClient:
   });
 };
 
-export const createLocalServerConnection = (sendToClient: (data: Message) => void, worlds: BlobStorage, users: BlobStorage) => {
+export const createLocalServerConnection = (sendToClient: (data: Message) => void, sendToWorld: (world: string, data: Message) => void, worlds: BlobStorage, users: BlobStorage) => {
   let world = null as World | null;
   return {
     send: async (data: Message) => {
@@ -73,9 +77,18 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
             sendToClient({ type: MessageType.WorldData, world: null });
           }
           break;
+        case MessageType.UpdateVoxel:
+          if (world === null) {
+            throw new Error("No world loaded");
+          }
+          world.voxelData[data.index] = data.value;
+          sendToWorld(world.token, data);
+          worlds.save(world.token, msgpack.encode(world));
+          break;
         default:
           throw new Error("Not implemented");
       }
     },
+    currentWorld: () => world,
   }
 };

@@ -44,6 +44,7 @@ const up = vec3.fromValues(0, 1, 0);
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 
+let conn = null as ServerConnection | null;
 let renderer = null as Renderer | null;
 let entity = null as Entity | null;
 let crosshair = null as Renderer | null;
@@ -91,6 +92,10 @@ const handleMouseMove = (event: MouseEvent) => {
 };
 
 const handleClick = (event: MouseEvent) => {
+  if (!conn) {
+    console.log('Connection is null');
+    return;
+  }
   const intersectAABB = (position: vec3, size: vec3, otherPosition: vec3, otherSize: vec3) => {
     const closestOtherPosition = vec3.clone(otherPosition);
     for (let ax = 0; ax < 3; ax += 1) {
@@ -129,6 +134,7 @@ const handleClick = (event: MouseEvent) => {
         const index = wrappedPos[0] + wrappedPos[1] * worldSize + wrappedPos[2] * worldSize * worldSize;
         if (voxelData[index] > 0) {
           if (event.button === 0) {
+            conn.send({ type: MessageType.UpdateVoxel, index, value: 0 });
             renderer.updateVoxel(index, 0);
           } else if (event.button === 2 && prevIndex !== null && prevPos !== null) {
             const foot = vec3.clone(eye);
@@ -137,6 +143,7 @@ const handleClick = (event: MouseEvent) => {
             foot[2] -= playerWidth / 2;
             const size = vec3.fromValues(playerWidth, playerHeight, playerWidth);
             if (!intersectAABB(foot, size, prevPos, vec3.fromValues(1, 1, 1))) {
+              conn.send({ type: MessageType.UpdateVoxel, index: prevIndex, value: 4 });
               renderer.updateVoxel(prevIndex, 4);
             }
           }
@@ -172,6 +179,26 @@ const init = async () => {
   const emojiIndex = {} as Record<string, number>;
   emoji.map((emoji, index) => emojiIndex[emoji] = index);
 
+  const worldDialog = document.getElementById('worldDialog') as HTMLDialogElement;
+  const worldSelect = document.getElementById('worldSelect') as HTMLSelectElement;
+  const joinWorldButton = document.getElementById('joinWorldButton') as HTMLButtonElement;
+  const newWorldButton = document.getElementById('newWorldButton') as HTMLButtonElement;
+
+  joinWorldButton.addEventListener('click', () => {
+    const selectedWorld = worldSelect.value;
+    if (selectedWorld && conn) {
+      conn.send({ type: MessageType.JoinWorld, token: selectedWorld });
+      worldDialog.close();
+    }
+  });
+
+  newWorldButton.addEventListener('click', () => {
+    if (conn) {
+      conn.send({ type: MessageType.NewWorld });
+      worldDialog.close();
+    }
+  });
+
   const onMessage = async (m: Message) => {
     if (conn === null) {
       console.error('Connection is null');
@@ -179,12 +206,14 @@ const init = async () => {
     }
     switch (m.type) {
       case MessageType.WorldList:
-        console.log('Worlds:', m.worlds);
-        if (m.worlds.length > 0) {
-          conn.send({ type: MessageType.JoinWorld, token: m.worlds[0] });
-        } else {
-          conn.send({ type: MessageType.NewWorld });
-        }
+        worldSelect.innerHTML = '';
+        m.worlds.forEach(world => {
+          const option = document.createElement('option');
+          option.value = world;
+          option.textContent = world;
+          worldSelect.appendChild(option);
+        });
+        worldDialog.showModal();
         break;
       case MessageType.WorldData:
         console.log('World:', m.world);
@@ -203,17 +232,19 @@ const init = async () => {
     }
   };
 
-  let conn = null as ServerConnection | null;
-  try {
-    conn = await createWebSocketServerConnection('ws://localhost:8080', onMessage);
+  const urlParams = new URLSearchParams(window.location.search);
+
+  const server = urlParams.get('server');
+  if (server) {
+    conn = await createWebSocketServerConnection(`ws://${server}`, onMessage);
     console.log('Connected to server');
-  } catch (e) {
+  } else {
     const worlds = createIndexedDBBlobStorage('worlds');
     const users = createIndexedDBBlobStorage('users');
-    conn = createLocalServerConnection(onMessage, worlds, users);
+    conn = createLocalServerConnection(onMessage, () => {}, worlds, users);
     console.log('Connected to local server');
   }
-  const urlParams = new URLSearchParams(window.location.search);
+
   const worldToken = urlParams.get('world');
   if (worldToken) {
     conn.send({ type: MessageType.JoinWorld, token: worldToken });

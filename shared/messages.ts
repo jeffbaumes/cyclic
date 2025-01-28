@@ -19,6 +19,7 @@ export enum MessageType {
   WorldData,
   ListWorlds,
   WorldList,
+  UpdateVoxel,
 };
 
 export type RegisterMessage = {
@@ -61,6 +62,12 @@ export type WorldListMessage = {
   worlds: string[];
 };
 
+export type UpdateVoxelMessage = {
+  type: MessageType.UpdateVoxel;
+  index: number;
+  value: number;
+};
+
 export type Message =
   RegisterMessage
   | LoginMessage
@@ -69,7 +76,8 @@ export type Message =
   | JoinWorldMessage
   | WorldMessage
   | ListWorldsMessage
-  | WorldListMessage;
+  | WorldListMessage
+  | UpdateVoxelMessage;
 
 export const encodeMessage = (message: Message): ArrayBuffer => {
   return encode(message);

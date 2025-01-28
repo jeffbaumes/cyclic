@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { decodeMessage, encodeMessage } from '../shared/messages';
-import { createLocalServerConnection } from '../shared/serverConnection';
+import { createLocalServerConnection, LocalServerConnection } from '../shared/serverConnection';
 import { createFileBlobStorage } from './storage';
 
 const main = async () => {
@@ -8,11 +8,25 @@ const main = async () => {
 
   const users = await createFileBlobStorage("./data/users");
   const worlds = await createFileBlobStorage("./data/worlds");
+  const connections = [] as {ws: WebSocket, localConn: LocalServerConnection}[];
 
   wss.on('connection', async (ws: WebSocket) => {
-    const localConn = await createLocalServerConnection((message) => {
-      ws.send(encodeMessage(message));
-    }, worlds, users);
+    const localConn = await createLocalServerConnection(
+      (message) => {
+        ws.send(encodeMessage(message));
+      },
+      (world, message) => {
+        connections.forEach(({ ws, localConn }) => {
+          if (localConn.currentWorld()?.token === world) {
+            ws.send(encodeMessage(message));
+          }
+        });
+      },
+      worlds,
+      users,
+    );
+
+    connections.push({ ws, localConn });
 
     ws.on('message', (data) => {
       ws.binaryType = "arraybuffer";
