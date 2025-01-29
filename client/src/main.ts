@@ -285,7 +285,7 @@ const init = async () => {
 
   const server = urlParams.get('server');
   if (server) {
-    conn = await createWebSocketServerConnection(`ws://${server}`, onMessage);
+    conn = await createWebSocketServerConnection(server, onMessage);
     console.log('Connected to server');
   } else {
     const worlds = createIndexedDBBlobStorage('worlds');
