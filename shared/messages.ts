@@ -17,6 +17,7 @@ export enum MessageType {
   LoginStatus,
   NewWorld,
   JoinWorld,
+  UserJoined,
   WorldData,
   ListWorlds,
   WorldList,
@@ -48,6 +49,11 @@ export type NewWorldMessage = {
 export type JoinWorldMessage = {
   type: MessageType.JoinWorld;
   token: string;
+};
+
+export type UserJoinedMessage = {
+  type: MessageType.UserJoined;
+  username: string;
 };
 
 export type WorldMessage = {
@@ -85,6 +91,7 @@ export type Message =
   | LoginStatusMessage
   | NewWorldMessage
   | JoinWorldMessage
+  | UserJoinedMessage
   | WorldMessage
   | ListWorldsMessage
   | WorldListMessage

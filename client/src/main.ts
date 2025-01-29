@@ -257,6 +257,12 @@ const init = async () => {
         renderer = await createMeshRenderer(gl, worldSize, m.world.voxels, emojiTexture);
         entities[username] = createEntity(gl, worldSize, emojiTexture, 0);
         break;
+      case MessageType.UserJoined:
+        if (!entities[m.username]) {
+          entities[m.username] = createEntity(gl, worldSize, emojiTexture, 0);
+        }
+        console.log('User joined:', m.username);
+        break;
       case MessageType.UpdateVoxel:
         if (renderer) {
           renderer.updateVoxel(m.index, m.value);

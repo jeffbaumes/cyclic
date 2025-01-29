@@ -76,35 +76,45 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
           sendToClient({ type: MessageType.LoginStatus, username: user.username, token: m.token, status: "success" });
           break;
         case MessageType.ListWorlds:
+          if (user === null) {
+            return;
+          }
           sendToClient({ type: MessageType.WorldList, worlds: await worlds.list() });
           break;
         case MessageType.NewWorld:
+          if (user === null) {
+            return;
+          }
           world = await generateWorld(64);
           worlds.save(world.token, msgpack.encode(world));
           sendToClient({ type: MessageType.WorldData, world });
           break;
         case MessageType.JoinWorld:
+          if (user === null) {
+            return;
+          }
           if (world !== null) {
             worlds.save(world.token, msgpack.encode(world));
           }
           try {
             world = msgpack.decode(await worlds.load(m.token)) as World;
             sendToClient({ type: MessageType.WorldData, world });
+            sendToWorld(m.token, { type: MessageType.UserJoined, username: user.username });
           } catch (error) {
             sendToClient({ type: MessageType.WorldData, world: null });
           }
           break;
         case MessageType.UpdateVoxel:
-          if (world === null) {
-            throw new Error("No world loaded");
+          if (user === null || world === null) {
+            return;
           }
           world.voxels[m.index] = m.value;
           sendToWorld(world.token, m);
           worlds.save(world.token, msgpack.encode(world));
           break;
         case MessageType.UserMove:
-          if (world === null) {
-            throw new Error("No world loaded");
+          if (user === null || world === null) {
+            return;
           }
           if (world.users[m.username] === undefined) {
             world.users[m.username] = { pos: [0, 0, 0], azimuth: 0, elevation: 0, vel: [0, 0, 0] };
@@ -117,7 +127,7 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
           worlds.save(world.token, msgpack.encode(world));
           break;
         default:
-          throw new Error("Not implemented");
+          console.error("Unknown message type", m);
       }
     },
     currentWorld: () => world,
