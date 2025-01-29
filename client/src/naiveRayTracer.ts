@@ -3,7 +3,7 @@ import fragmentShaderSource from './shaders/world.frag?raw';
 import { Renderer } from './types';
 import { vec3 } from 'gl-matrix';
 
-export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: Uint8Array): Renderer => {
+export const init = (gl: WebGL2RenderingContext, worldSize: number, voxels: Uint8Array): Renderer => {
   const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
     const shader = gl.createShader(type);
     if (!shader) {
@@ -58,7 +58,7 @@ export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: U
 
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_3D, texture);
-  gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, worldSize, worldSize, worldSize, 0, gl.RED, gl.UNSIGNED_BYTE, voxelData);
+  gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, worldSize, worldSize, worldSize, 0, gl.RED, gl.UNSIGNED_BYTE, voxels);
   gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -86,7 +86,7 @@ export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: U
   }
 
   const updateVoxel = (index: number, value: number) => {
-    voxelData[index] = value;
+    voxels[index] = value;
     gl.bindTexture(gl.TEXTURE_3D, texture);
     gl.texSubImage3D(gl.TEXTURE_3D, 0, index % worldSize, Math.floor(index / worldSize) % worldSize, Math.floor(index / (worldSize * worldSize)), 1, 1, 1, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array([value]));
   };
@@ -106,7 +106,7 @@ export const init = (gl: WebGL2RenderingContext, worldSize: number, voxelData: U
   };
 
   return {
-    voxelData,
+    voxels,
     render,
     updateVoxel,
   };

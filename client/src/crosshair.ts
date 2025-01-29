@@ -80,7 +80,7 @@ export const createCrosshair = (gl: WebGL2RenderingContext): Renderer => {
   initBuffers();
 
   return {
-    voxelData: new Uint8Array(),
+    voxels: new Uint8Array(),
     render,
     updateVoxel: () => {},
   };
