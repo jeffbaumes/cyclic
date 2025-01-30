@@ -1,6 +1,6 @@
 
 export type BlobStorage = {
-  save(name: string, data: Uint8Array): Promise<void>;
-  load(name: string): Promise<Uint8Array>;
+  save(name: string, data: any): Promise<void>;
+  load(name: string): Promise<any>;
   list(): Promise<string[]>;
 };

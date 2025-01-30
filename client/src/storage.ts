@@ -1,4 +1,5 @@
 import { BlobStorage } from '../../shared/storage';
+import * as msgpack from '@msgpack/msgpack';
 
 export const createIndexedDBBlobStorage = (dbName: string): BlobStorage => {
   const getDb = async (): Promise<IDBDatabase> => {
@@ -16,18 +17,18 @@ export const createIndexedDBBlobStorage = (dbName: string): BlobStorage => {
   };
 
   return {
-    save: async (name: string, data: Uint8Array): Promise<void> => {
+    save: async (name: string, data: any): Promise<void> => {
       const db = await getDb();
       return new Promise((resolve, reject) => {
         const transaction = db.transaction('files', 'readwrite');
         const store = transaction.objectStore('files');
-        const request = store.put(data, name);
+        const request = store.put(msgpack.encode(data), name);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
     },
 
-    load: async (name: string): Promise<Uint8Array> => {
+    load: async (name: string): Promise<any> => {
       const db = await getDb();
       return new Promise((resolve, reject) => {
         const transaction = db.transaction('files', 'readonly');
@@ -35,7 +36,7 @@ export const createIndexedDBBlobStorage = (dbName: string): BlobStorage => {
         const request = store.get(name);
         request.onsuccess = () => {
           if (request.result) {
-            resolve(new Uint8Array(request.result));
+            resolve(msgpack.decode(new Uint8Array(request.result)));
           } else {
             reject(new Error('File not found'));
           }
