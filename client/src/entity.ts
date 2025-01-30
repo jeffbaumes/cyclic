@@ -191,9 +191,9 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
     entityPosition = canonicalPos(pos, worldSize);
   };
 
-  const updateLook = (azimuth: number, altitude: number) => {
-    entityRotation = mat4.rotateX(mat4.create(), mat4.create(), altitude);
-    entityRotation = mat4.rotateY(entityRotation, entityRotation, azimuth);
+  const updateLook = (azimuth: number, elevation: number) => {
+    entityRotation = mat4.rotateY(mat4.create(), mat4.create(), azimuth);
+    entityRotation = mat4.rotateX(entityRotation, entityRotation, -elevation);
   };
 
   const render = (eye: vec3, lookDirection: vec3, renderDistance: number, _rayStep: number) => {
