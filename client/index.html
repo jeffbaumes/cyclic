@@ -11,6 +11,46 @@
     <div class="w-screen h-screen flex items-center justify-center absolute top-0 left-0">
       <canvas id="canvas" class="w-full h-full"></canvas>
     </div>
+    <dialog id="serverDialog" class="bg-gray-700 rounded-lg p-6 shadow-lg">
+      <form method="dialog" class="space-y-4">
+        <p class="text-lg font-semibold">Select a server:</p>
+        <div class="overflow-y-auto max-h-40">
+          <ul id="serverList" class="space-y-2">
+            <!-- Server list will be populated dynamically -->
+          </ul>
+        </div>
+        <menu class="flex space-x-4">
+          <button id="addServerButton" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Add Server</button>
+          <button id="joinServerButton" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700" disabled>Connect</button>
+          <button id="deleteServerButton" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700" disabled>Delete</button>
+          <button id="playLocallyButton" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700">Play Locally</button>
+        </menu>
+      </form>
+    </dialog>
+    <dialog id="addServerDialog" class="bg-gray-700 rounded-lg p-6 shadow-lg">
+      <form method="dialog" class="space-y-4">
+        <p class="text-lg font-semibold">Add Server</p>
+        <input id="serverNameInput" type="text" placeholder="Server Name" class="w-full p-2 bg-gray-600 border border-gray-500 rounded" required>
+        <menu class="flex space-x-4">
+          <button id="saveServerButton" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Save</button>
+        </menu>
+      </form>
+    </dialog>
+    <dialog id="userDialog" class="bg-gray-700 rounded-lg p-6 shadow-lg">
+      <form method="dialog" class="space-y-4">
+        <p class="text-lg font-semibold">Select a user:</p>
+        <div class="overflow-y-auto max-h-40">
+          <ul id="userList" class="space-y-2">
+            <!-- User list will be populated dynamically -->
+          </ul>
+        </div>
+        <menu class="flex space-x-4">
+          <button id="addUserButton" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Add User</button>
+          <button id="selectUserButton" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700" disabled>Select</button>
+          <button id="deleteUserButton" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700" disabled>Delete</button>
+        </menu>
+      </form>
+    </dialog>
     <dialog id="worldDialog" class="bg-gray-700 rounded-lg p-6 shadow-lg">
       <form method="dialog" class="space-y-4">
         <p class="text-lg font-semibold">Select a world:</p>

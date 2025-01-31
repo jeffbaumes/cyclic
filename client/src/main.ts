@@ -5,7 +5,7 @@ import { createCrosshair } from './crosshair';
 import { createEntity, Entity } from './entity';
 import { createEmojiTexture } from './emojiImage';
 import { Message, MessageType } from '../../shared/messages';
-import { createLocalServerConnection, createWebSocketServerConnection, ServerConnection } from '../../shared/serverConnection';
+import { createLocalServerConnection, createWebSocketServerConnection, ServerConnection, User } from '../../shared/serverConnection';
 import { createIndexedDBBlobStorage } from './storage';
 import './index.css';
 
@@ -202,16 +202,150 @@ const init = async () => {
     }
   });
 
+  const serverDialog = document.getElementById('serverDialog') as HTMLDialogElement;
+  const serverList = document.getElementById('serverList') as HTMLUListElement;
+  const addServerButton = document.getElementById('addServerButton') as HTMLButtonElement;
+  const joinServerButton = document.getElementById('joinServerButton') as HTMLButtonElement;
+  const deleteServerButton = document.getElementById('deleteServerButton') as HTMLButtonElement;
+  const playLocallyButton = document.getElementById('playLocallyButton') as HTMLButtonElement;
+  const addServerDialog = document.getElementById('addServerDialog') as HTMLDialogElement;
+  const serverNameInput = document.getElementById('serverNameInput') as HTMLInputElement;
+  const saveServerButton = document.getElementById('saveServerButton') as HTMLButtonElement;
+
+  const servers: {url: string, users: User[]}[] = JSON.parse(localStorage.getItem('servers') || '[]');
+  const localUsers: User[] = JSON.parse(localStorage.getItem('localUsers') || '[]');
+  let selectedServerIndex: number | null = null;
+
+  const updateServerList = () => {
+    serverList.innerHTML = '';
+    servers.forEach((server, index) => {
+      const li = document.createElement('li');
+      li.className = 'flex justify-between items-center p-2 bg-gray-600 rounded cursor-pointer';
+      li.innerHTML = `<span>${server.url}</span>`;
+      li.dataset.index = index.toString();
+      li.addEventListener('click', () => {
+        selectedServerIndex = index;
+        document.querySelectorAll('#serverList li').forEach(li => li.classList.remove('bg-gray-500'));
+        li.classList.add('bg-gray-500');
+        joinServerButton.disabled = false;
+        deleteServerButton.disabled = false;
+      });
+      serverList.appendChild(li);
+    });
+  };
+
+  addServerButton.addEventListener('click', () => {
+    addServerDialog.showModal();
+  });
+
+  saveServerButton.addEventListener('click', () => {
+    const serverName = serverNameInput.value.trim();
+    if (serverName) {
+      servers.push({ url: serverName, users: [] });
+      localStorage.setItem('servers', JSON.stringify(servers));
+      updateServerList();
+      addServerDialog.close();
+      serverDialog.showModal();
+    }
+  });
+
+  joinServerButton.addEventListener('click', async () => {
+    if (selectedServerIndex !== null) {
+      const server = servers[selectedServerIndex];
+      conn = await createWebSocketServerConnection(server.url, onMessage);
+      console.log(`Joining server: ${server.url}`);
+      serverDialog.close();
+      users = servers[selectedServerIndex].users;
+      updateUserList();
+      userDialog.showModal();
+    }
+  });
+
+  deleteServerButton.addEventListener('click', () => {
+    if (selectedServerIndex !== null) {
+      servers.splice(selectedServerIndex, 1);
+      localStorage.setItem('servers', JSON.stringify(servers));
+      updateServerList();
+      joinServerButton.disabled = true;
+      deleteServerButton.disabled = true;
+    }
+  });
+
+  playLocallyButton.addEventListener('click', () => {
+    const worldStorage = createIndexedDBBlobStorage('worlds');
+    const userStorage = createIndexedDBBlobStorage('users');
+    conn = createLocalServerConnection(onMessage, (_world, m) => onMessage(m), worldStorage, userStorage);
+    console.log('Playing locally');
+    serverDialog.close();
+    users = localUsers;
+    updateUserList();
+    userDialog.showModal();
+  });
+
+
+  const userDialog = document.getElementById('userDialog') as HTMLDialogElement;
+  const userList = document.getElementById('userList') as HTMLUListElement;
+  const addUserButton = document.getElementById('addUserButton') as HTMLButtonElement;
+  const selectUserButton = document.getElementById('selectUserButton') as HTMLButtonElement;
+  const deleteUserButton = document.getElementById('deleteUserButton') as HTMLButtonElement;
   const registerDialog = document.getElementById('registerDialog') as HTMLDialogElement;
   const usernameInput = document.getElementById('usernameInput') as HTMLInputElement;
   const registerButton = document.getElementById('registerButton') as HTMLButtonElement;
 
+  let selectedUserIndex: number | null = null;
+  let users: User[] = [];
+
+  const updateUserList = () => {
+    userList.innerHTML = '';
+    users.forEach((user, index) => {
+      const li = document.createElement('li');
+      li.className = 'flex justify-between items-center p-2 bg-gray-600 rounded cursor-pointer';
+      li.innerHTML = `<span>${user.username}</span>`;
+      li.dataset.index = index.toString();
+      li.addEventListener('click', () => {
+        selectedUserIndex = index;
+        document.querySelectorAll('#userList li').forEach(li => li.classList.remove('bg-gray-500'));
+        li.classList.add('bg-gray-500');
+        selectUserButton.disabled = false;
+        deleteUserButton.disabled = false;
+      });
+      userList.appendChild(li);
+    });
+  };
+
+  addUserButton.addEventListener('click', () => {
+    registerDialog.showModal();
+  });
+
   registerButton.addEventListener('click', () => {
     if (conn) {
-      conn.send({ type: MessageType.Register, username: usernameInput.value });
       registerDialog.close();
+      conn.send({ type: MessageType.Register, username: usernameInput.value });
     }
   });
+
+  selectUserButton.addEventListener('click', () => {
+    if (selectedUserIndex !== null && conn !== null) {
+      const token = users[selectedUserIndex].token;
+      console.log(`Selected user: ${username}`);
+      userDialog.close();
+      conn.send({ type: MessageType.Login, token });
+    }
+  });
+
+  deleteUserButton.addEventListener('click', () => {
+    if (selectedUserIndex !== null) {
+      users.splice(selectedUserIndex, 1);
+      localStorage.setItem('servers', JSON.stringify(servers));
+      localStorage.setItem('localUsers', JSON.stringify(localUsers));
+      updateUserList();
+      selectUserButton.disabled = true;
+      deleteUserButton.disabled = true;
+    }
+  });
+
+  updateServerList();
+  serverDialog.showModal();
 
   const onMessage = async (m: Message) => {
     if (conn === null) {
@@ -221,18 +355,20 @@ const init = async () => {
     switch (m.type) {
       case MessageType.LoginStatus:
         if (m.status === 'success') {
-          localStorage.setItem('user', m.token);
-          username = m.username;
-          const urlParams = new URLSearchParams(window.location.search);
-          const worldToken = urlParams.get('world');
-          if (worldToken) {
-            conn.send({ type: MessageType.JoinWorld, token: worldToken });
+          if (users.find(u => u.username === m.username) === undefined) {
+            users.push({ username: m.username, token: m.token });
+            localStorage.setItem('servers', JSON.stringify(servers));
+            localStorage.setItem('localUsers', JSON.stringify(localUsers));
+            registerDialog.close();
+            updateUserList();
+            userDialog.showModal();
           } else {
+            userDialog.close();
+            username = m.username;
             conn.send({ type: MessageType.ListWorlds });
           }
         } else {
           console.log('Login failed');
-          localStorage.removeItem('user');
         }
         break;
       case MessageType.WorldList:
@@ -251,9 +387,6 @@ const init = async () => {
           return;
         }
         world = m.world.token;
-        const url = new URL(window.location.href);
-        url.searchParams.set('world', m.world.token);
-        window.history.replaceState({}, '', url.toString());
         renderer = await createMeshRenderer(gl, worldSize, m.world.voxels, emojiTexture);
         entities[username] = createEntity(gl, worldSize, emojiTexture, 0);
         break;
@@ -280,26 +413,6 @@ const init = async () => {
         break;
     }
   };
-
-  const urlParams = new URLSearchParams(window.location.search);
-
-  const server = urlParams.get('server');
-  if (server) {
-    conn = await createWebSocketServerConnection(server, onMessage);
-    console.log('Connected to server');
-  } else {
-    const worlds = createIndexedDBBlobStorage('worlds');
-    const users = createIndexedDBBlobStorage('users');
-    conn = createLocalServerConnection(onMessage, (_world, m) => onMessage(m), worlds, users);
-    console.log('Connected to local server');
-  }
-
-  const user = localStorage.getItem('user');
-  if (user) {
-    conn.send({ type: MessageType.Login, token: user });
-  } else {
-    registerDialog.showModal();
-  }
 
   crosshair = createCrosshair(gl);
 

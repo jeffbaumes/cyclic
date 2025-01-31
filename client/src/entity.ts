@@ -23,7 +23,7 @@ const createMesh = (texture: number): {
     [baseX, baseY + size, baseZ + size],
     [baseX, baseY, baseZ + size],
     [baseX, baseY, baseZ],
-    texture,
+    texture+1,
     1 | 4,
   );
   addQuad(
@@ -33,7 +33,7 @@ const createMesh = (texture: number): {
     [baseX + size, baseY + size, baseZ + size],
     [baseX + size, baseY, baseZ + size],
     [baseX + size, baseY, baseZ],
-    texture,
+    texture+1,
     1,
   );
   addQuad(
@@ -43,7 +43,7 @@ const createMesh = (texture: number): {
     [baseX + size, baseY, baseZ],
     [baseX + size, baseY, baseZ + size],
     [baseX, baseY, baseZ + size],
-    texture,
+    texture+1,
     2 | 4,
   );
   addQuad(
@@ -53,7 +53,7 @@ const createMesh = (texture: number): {
     [baseX, baseY + size, baseZ + size],
     [baseX + size, baseY + size, baseZ + size],
     [baseX + size, baseY + size, baseZ],
-    texture,
+    texture+1,
     2,
   );
   addQuad(
@@ -63,7 +63,7 @@ const createMesh = (texture: number): {
     [baseX + size, baseY + size, baseZ],
     [baseX + size, baseY, baseZ],
     [baseX, baseY, baseZ],
-    texture,
+    texture+1,
     3 | 4,
   );
   addQuad(
