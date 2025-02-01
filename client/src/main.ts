@@ -192,6 +192,7 @@ const init = async () => {
   const worldSelect = document.getElementById('worldSelect') as HTMLSelectElement;
   const joinWorldButton = document.getElementById('joinWorldButton') as HTMLButtonElement;
   const newWorldButton = document.getElementById('newWorldButton') as HTMLButtonElement;
+  const logOutButton = document.getElementById('logOutButton') as HTMLButtonElement;
 
   joinWorldButton.addEventListener('click', () => {
     const selectedWorld = worldSelect.value;
@@ -206,6 +207,14 @@ const init = async () => {
       conn.send({ type: MessageType.NewWorld });
       worldDialog.close();
     }
+  });
+
+  logOutButton.addEventListener('click', () => {
+    if (conn) {
+      conn.send({ type: MessageType.LogOut });
+    }
+    username = '';
+    userDialog.showModal();
   });
 
   const serverDialog = document.getElementById('serverDialog') as HTMLDialogElement;
@@ -294,6 +303,7 @@ const init = async () => {
   const addUserButton = document.getElementById('addUserButton') as HTMLButtonElement;
   const selectUserButton = document.getElementById('selectUserButton') as HTMLButtonElement;
   const deleteUserButton = document.getElementById('deleteUserButton') as HTMLButtonElement;
+  const exitServerButton = document.getElementById('exitServerButton') as HTMLButtonElement;
   const registerDialog = document.getElementById('registerDialog') as HTMLDialogElement;
   const usernameInput = document.getElementById('usernameInput') as HTMLInputElement;
   const registerButton = document.getElementById('registerButton') as HTMLButtonElement;
@@ -350,6 +360,13 @@ const init = async () => {
     }
   });
 
+  exitServerButton.addEventListener('click', () => {
+    if (conn) {
+      conn.close();
+      conn = null;
+    }
+    serverDialog.showModal();
+  });
 
   const pauseDialog = document.getElementById('pauseDialog') as HTMLDialogElement;
   const viewAngleInput = document.getElementById('viewAngle') as HTMLInputElement;

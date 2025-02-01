@@ -9,6 +9,7 @@ export type User = {
 
 export type ServerConnection = {
   send: (data: Message) => Promise<void>;
+  close: () => void;
 };
 
 export type LocalServerConnection = ServerConnection & {
@@ -16,7 +17,7 @@ export type LocalServerConnection = ServerConnection & {
   currentUser: () => User | null;
 };
 
-export const createWebSocketServerConnection = async (url: string, sendToClient: (data: Message) => void) => {
+export const createWebSocketServerConnection = async (url: string, sendToClient: (data: Message) => void): Promise<ServerConnection> => {
   return new Promise<ServerConnection>(async (resolve, reject) => {
     try {
       const ws = new WebSocket(url);
@@ -47,6 +48,9 @@ export const createWebSocketServerConnection = async (url: string, sendToClient:
         send: async (data: Message) => {
           ws.send(encodeMessage(data));
         },
+        close: () => {
+          ws.close();
+        },
       });
     } catch (error) {
       reject(error);
@@ -54,7 +58,7 @@ export const createWebSocketServerConnection = async (url: string, sendToClient:
   });
 };
 
-export const createLocalServerConnection = (sendToClient: (data: Message) => void, sendToWorld: (world: string, data: Message) => void, worlds: BlobStorage, users: BlobStorage) => {
+export const createLocalServerConnection = (sendToClient: (data: Message) => void, sendToWorld: (world: string, data: Message) => void, worlds: BlobStorage, users: BlobStorage): LocalServerConnection => {
   let world = null as World | null;
   let user = null as User | null;
   return {
@@ -133,11 +137,15 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
           world = null;
           sendToWorld(worldToken, { type: MessageType.UserLeft, username: user.username });
           break;
+        case MessageType.LogOut:
+          user = null;
+          break;
         default:
           console.error("Unknown message type", m);
       }
     },
     currentWorld: () => world,
     currentUser: () => user,
+    close: () => { },
   }
 };

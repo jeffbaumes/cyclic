@@ -23,6 +23,7 @@ export enum MessageType {
   WorldList,
   LeaveWorld,
   UserLeft,
+  LogOut,
   UpdateVoxel,
   UserMove,
 };
@@ -96,6 +97,10 @@ export type UserLeftMessage = {
   username: string;
 };
 
+export type LogOutMessage = {
+  type: MessageType.LogOut;
+};
+
 export type Message =
   RegisterMessage
   | LoginMessage
@@ -109,7 +114,8 @@ export type Message =
   | UpdateVoxelMessage
   | UserMoveMessage
   | LeaveWorldMessage
-  | UserLeftMessage;
+  | UserLeftMessage
+  | LogOutMessage;
 
 export const encodeMessage = (message: Message): ArrayBuffer => {
   return encode(message);
