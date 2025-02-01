@@ -1,6 +1,5 @@
 import vertexShaderSource from './shaders/mesh.vert?raw';
 import fragmentShaderSource from './shaders/mesh.frag?raw';
-import { Renderer } from './types';
 import { mat4, vec3 } from 'gl-matrix';
 import { addQuad } from './quad';
 
@@ -107,7 +106,7 @@ const createMesh = (voxels: Uint8Array, worldSize: number): {
   };
 };
 
-export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: number, voxels: Uint8Array, emojiTexture: WebGLTexture): Promise<Renderer> => {
+export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: number, voxels: Uint8Array, emojiTexture: WebGLTexture) => {
   const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
     const shader = gl.createShader(type);
     if (!shader) {
@@ -218,7 +217,7 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
     info = newInfo;
   };
 
-  const render = (eye: vec3, lookDirection: vec3, renderDistance: number, _rayStep: number) => {
+  const render = (eye: vec3, lookDirection: vec3, renderDistance: number, viewAngle: number) => {
     gl.clearColor(0.5, 0.6, 0.7, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -239,7 +238,7 @@ export const createMeshRenderer = async (gl: WebGL2RenderingContext, worldSize: 
     gl.vertexAttribIPointer(infoAttributeLocation, 1, gl.UNSIGNED_INT, 0, 0);
 
     const aspect = gl.canvas.width / gl.canvas.height;
-    const projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 4, aspect, 0.1, renderDistance);
+    const projectionMatrix = mat4.perspective(mat4.create(), viewAngle * Math.PI / 180, aspect, 0.1, renderDistance);
     const viewMatrix = mat4.lookAt(mat4.create(), eye, vec3.add(vec3.create(), eye, lookDirection), [0, 1, 0]);
     const modelViewProjectionMatrix = mat4.multiply(mat4.create(), projectionMatrix, viewMatrix);
 

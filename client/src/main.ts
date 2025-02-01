@@ -1,8 +1,7 @@
 import { vec3 } from 'gl-matrix';
 import { createMeshRenderer } from './meshRenderer';
-import { Renderer } from './types';
 import { createCrosshair } from './crosshair';
-import { createEntity, Entity } from './entity';
+import { createEntity } from './entity';
 import { createEmojiTexture } from './emojiImage';
 import { Message, MessageType } from '../../shared/messages';
 import { createLocalServerConnection, createWebSocketServerConnection, ServerConnection, User } from '../../shared/serverConnection';
@@ -44,12 +43,13 @@ const up = vec3.fromValues(0, 1, 0);
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 
+let viewAngle = +(localStorage.getItem('viewAngle') || 90);
 let conn = null as ServerConnection | null;
 let username = '';
 let world = null as string | null;
-let renderer = null as Renderer | null;
-let entities: { [token: string]: Entity } = {};
-let crosshair = null as Renderer | null;
+let renderer = null as Awaited<ReturnType<typeof createMeshRenderer>> | null;
+let entities: { [token: string]: ReturnType<typeof createEntity> } = {};
+let crosshair = null as ReturnType<typeof createCrosshair> | null;
 let lastTime = 0;
 let lastMoveUpdateTime = 0;
 let eye = vec3.fromValues(0, 0.75 * worldSize, 0);
@@ -76,10 +76,16 @@ const resizeCanvas = (canvas: HTMLCanvasElement, gl: WebGL2RenderingContext) => 
 };
 
 const handleKeyDown = (event: KeyboardEvent) => {
+  if (document.pointerLockElement !== canvas) {
+    return;
+  }
   keys[event.key.toLowerCase()] = true;
 };
 
 const handleKeyUp = (event: KeyboardEvent) => {
+  if (document.pointerLockElement !== canvas) {
+    return;
+  }
   keys[event.key.toLowerCase()] = false;
 };
 
@@ -344,6 +350,46 @@ const init = async () => {
     }
   });
 
+
+  const pauseDialog = document.getElementById('pauseDialog') as HTMLDialogElement;
+  const viewAngleInput = document.getElementById('viewAngle') as HTMLInputElement;
+  const resumeButton = document.getElementById('resumeButton') as HTMLButtonElement;
+  const leaveWorldButton = document.getElementById('leaveWorldButton') as HTMLButtonElement;
+
+  resumeButton.addEventListener('click', () => {
+    pauseDialog.close();
+    canvas.requestPointerLock();
+  });
+
+  leaveWorldButton.addEventListener('click', () => {
+    pauseDialog.close();
+    if (conn) {
+      conn.send({ type: MessageType.LeaveWorld });
+      world = null;
+      renderer = null;
+      entities = {};
+      worldDialog.showModal();
+    }
+  });
+
+  viewAngleInput.value = viewAngle.toString();
+  viewAngleInput.addEventListener('input', () => {
+    viewAngle = +viewAngleInput.value;
+    localStorage.setItem('viewAngle', viewAngle.toString());
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    console.log(document.pointerLockElement);
+    if (document.pointerLockElement === canvas) {
+      canvas.focus();
+    } else {
+      for (const key in keys) {
+        keys[key] = false;
+        pauseDialog.showModal();
+      }
+    }
+  });
+
   updateServerList();
   serverDialog.showModal();
 
@@ -395,6 +441,12 @@ const init = async () => {
           entities[m.username] = createEntity(gl, worldSize, emojiTexture, 0);
         }
         console.log('User joined:', m.username);
+        break;
+      case MessageType.UserLeft:
+        if (entities[m.username]) {
+          delete entities[m.username];
+        }
+        console.log('User left:', m.username);
         break;
       case MessageType.UpdateVoxel:
         if (renderer) {
@@ -599,16 +651,16 @@ const update = (time: number) => {
   );
 
   if (renderer) {
-    renderer.render(eye, lookDirection, 150, 0.01);
+    renderer.render(eye, lookDirection, 150, viewAngle);
   }
   for (const name in entities) {
     if (name !== username) {
       const entity = entities[name];
-      entity.render(eye, lookDirection, 150, 0.01);
+      entity.render(eye, lookDirection, 150, viewAngle);
     }
   }
   if (crosshair) {
-    crosshair.render(eye, lookDirection, 150, 0.01);
+    crosshair.render();
   }
 
   requestAnimationFrame(update);

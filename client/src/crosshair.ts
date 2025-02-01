@@ -1,6 +1,5 @@
 import vsSource from './shaders/cross.vert?raw';
 import fsSource from './shaders/cross.frag?raw';
-import { Renderer } from './types';
 
 const loadShader = (gl: WebGL2RenderingContext, type: number, source: string) => {
   const shader = gl.createShader(type);
@@ -39,7 +38,7 @@ const initShaderProgram = (gl: WebGL2RenderingContext, vsSource: string, fsSourc
   return shaderProgram;
 };
 
-export const createCrosshair = (gl: WebGL2RenderingContext): Renderer => {
+export const createCrosshair = (gl: WebGL2RenderingContext) => {
   const program = initShaderProgram(gl, vsSource, fsSource);
 
   const buffers = { position: gl.createBuffer() };

@@ -1,6 +1,5 @@
 import vertexShaderSource from './shaders/mesh.vert?raw';
 import fragmentShaderSource from './shaders/mesh.frag?raw';
-import { Renderer } from './types';
 import { mat4, vec3 } from 'gl-matrix';
 import { addQuad } from './quad';
 
@@ -83,12 +82,7 @@ const createMesh = (texture: number): {
   };
 };
 
-export type Entity = Renderer & {
-  updatePosition: (position: vec3) => void;
-  updateLook: (azimuth: number, altitude: number) => void;
-};
-
-export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emojiTexture: WebGLTexture, texture: number): Entity => {
+export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emojiTexture: WebGLTexture, texture: number) => {
   const createShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null => {
     const shader = gl.createShader(type);
     if (!shader) {
@@ -196,7 +190,7 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
     entityRotation = mat4.rotateX(entityRotation, entityRotation, -elevation);
   };
 
-  const render = (eye: vec3, lookDirection: vec3, renderDistance: number, _rayStep: number) => {
+  const render = (eye: vec3, lookDirection: vec3, renderDistance: number, viewAngle: number) => {
     eye = canonicalPos(eye, worldSize);
 
     gl.enable(gl.BLEND);
@@ -212,7 +206,7 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
     gl.vertexAttribIPointer(infoAttributeLocation, 1, gl.UNSIGNED_INT, 0, 0);
 
     const aspect = gl.canvas.width / gl.canvas.height;
-    const projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 4, aspect, 0.1, renderDistance);
+    const projectionMatrix = mat4.perspective(mat4.create(), viewAngle * Math.PI / 180, aspect, 0.1, renderDistance);
     const viewMatrix = mat4.lookAt(mat4.create(), eye, vec3.add(vec3.create(), eye, lookDirection), [0, 1, 0]);
     const modelViewProjectionMatrix = mat4.multiply(mat4.create(), projectionMatrix, viewMatrix);
 

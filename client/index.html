@@ -72,6 +72,14 @@
         </menu>
       </form>
     </dialog>
+    <dialog id="pauseDialog" class="bg-gray-700 rounded-lg p-6 shadow-lg backdrop:bg-black/50 backdrop-blur-lg">
+      <form method="dialog" class="space-y-4">
+        <menu class="flex space-x-4">
+          <input type="range" id="viewAngle" min="40" max="120" step="1" class="w-full bg-gray-600 rounded" value="90">
+          <button id="resumeButton" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Resume</button>
+          <button id="leaveWorldButton" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700">Leave World</button>
+        </menu>
+      </form>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

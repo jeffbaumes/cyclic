@@ -125,6 +125,14 @@ export const createLocalServerConnection = (sendToClient: (data: Message) => voi
           sendToWorld(world.token, m);
           worlds.save(world.token, world);
           break;
+        case MessageType.LeaveWorld:
+          if (user === null || world === null) {
+            return;
+          }
+          const worldToken = world.token;
+          world = null;
+          sendToWorld(worldToken, { type: MessageType.UserLeft, username: user.username });
+          break;
         default:
           console.error("Unknown message type", m);
       }
