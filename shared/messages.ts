@@ -19,6 +19,7 @@ export enum MessageType {
   JoinWorld,
   UserJoined,
   WorldData,
+  WaterData,
   ListWorlds,
   WorldList,
   LeaveWorld,
@@ -59,9 +60,14 @@ export type UserJoinedMessage = {
   username: string;
 };
 
-export type WorldMessage = {
+export type WorldDataMessage = {
   type: MessageType.WorldData;
   world: World | null;
+};
+
+export type UpdateWaterMessage = {
+  type: MessageType.WaterData;
+  water: Float32Array;
 };
 
 export type ListWorldsMessage = {
@@ -108,7 +114,8 @@ export type Message =
   | NewWorldMessage
   | JoinWorldMessage
   | UserJoinedMessage
-  | WorldMessage
+  | WorldDataMessage
+  | UpdateWaterMessage
   | ListWorldsMessage
   | WorldListMessage
   | UpdateVoxelMessage

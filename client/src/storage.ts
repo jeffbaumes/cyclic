@@ -17,6 +17,7 @@ export const createIndexedDBBlobStorage = (dbName: string): BlobStorage => {
   };
 
   return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     save: async (name: string, data: any): Promise<void> => {
       const db = await getDb();
       return new Promise((resolve, reject) => {
@@ -28,6 +29,7 @@ export const createIndexedDBBlobStorage = (dbName: string): BlobStorage => {
       });
     },
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     load: async (name: string): Promise<any> => {
       const db = await getDb();
       return new Promise((resolve, reject) => {

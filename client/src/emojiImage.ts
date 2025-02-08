@@ -57,6 +57,7 @@ export const createEmojiImage = (emoji: string, size: number): Promise<HTMLImage
 };
 
 export const createEmojiTiledImage = async (emojis: string[], tilesPerRow: number, tileSize: number): Promise<HTMLImageElement> => {
+  // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
     const rows = Math.ceil(emojis.length / tilesPerRow);
     const canvas = document.createElement('canvas');

@@ -22,7 +22,7 @@ const createMesh = (texture: number): {
     [baseX, baseY + size, baseZ + size],
     [baseX, baseY, baseZ + size],
     [baseX, baseY, baseZ],
-    texture+1,
+    texture + 1,
     1 | 4,
   );
   addQuad(
@@ -32,7 +32,7 @@ const createMesh = (texture: number): {
     [baseX + size, baseY + size, baseZ + size],
     [baseX + size, baseY, baseZ + size],
     [baseX + size, baseY, baseZ],
-    texture+1,
+    texture + 1,
     1,
   );
   addQuad(
@@ -42,7 +42,7 @@ const createMesh = (texture: number): {
     [baseX + size, baseY, baseZ],
     [baseX + size, baseY, baseZ + size],
     [baseX, baseY, baseZ + size],
-    texture+1,
+    texture + 1,
     2 | 4,
   );
   addQuad(
@@ -52,7 +52,7 @@ const createMesh = (texture: number): {
     [baseX, baseY + size, baseZ + size],
     [baseX + size, baseY + size, baseZ + size],
     [baseX + size, baseY + size, baseZ],
-    texture+1,
+    texture + 1,
     2,
   );
   addQuad(
@@ -62,7 +62,7 @@ const createMesh = (texture: number): {
     [baseX + size, baseY + size, baseZ],
     [baseX + size, baseY, baseZ],
     [baseX, baseY, baseZ],
-    texture+1,
+    texture + 1,
     3 | 4,
   );
   addQuad(
@@ -159,9 +159,9 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
   let entityPosition = vec3.create();
   let entityRotation = mat4.identity(mat4.create());
 
-  let { position, info } = createMesh(texture);
+  const { position, info } = createMesh(texture);
 
-  let positionBuffer = gl.createBuffer();
+  const positionBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, position, gl.STATIC_DRAW);
 
@@ -169,7 +169,7 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
   gl.enableVertexAttribArray(positionAttributeLocation);
   gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0);
 
-  let infoBuffer = gl.createBuffer();
+  const infoBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, infoBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, info, gl.STATIC_DRAW);
 
@@ -236,7 +236,7 @@ export const createEntity = (gl: WebGL2RenderingContext, worldSize: number, emoj
 
   return {
     voxels: new Uint8Array(),
-    updateVoxel: () => {},
+    updateVoxel: () => { },
     render,
     updatePosition,
     updateLook,

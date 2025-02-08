@@ -32,7 +32,7 @@ const initShaderProgram = (gl: WebGL2RenderingContext, vsSource: string, fsSourc
 
   if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
     throw "Unable to initialize the shader program: " +
-        gl.getProgramInfoLog(shaderProgram);
+    gl.getProgramInfoLog(shaderProgram);
   }
 
   return shaderProgram;
@@ -81,6 +81,6 @@ export const createCrosshair = (gl: WebGL2RenderingContext) => {
   return {
     voxels: new Uint8Array(),
     render,
-    updateVoxel: () => {},
+    updateVoxel: () => { },
   };
 };

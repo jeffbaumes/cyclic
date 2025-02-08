@@ -4,11 +4,11 @@ import { createLocalServerConnection, LocalServerConnection } from '../shared/se
 import { createFileBlobStorage } from './storage';
 
 const main = async () => {
-  const wss = new WebSocketServer({ port: 8080});
+  const wss = new WebSocketServer({ port: 8080 });
 
   const users = await createFileBlobStorage("./data/users");
   const worlds = await createFileBlobStorage("./data/worlds");
-  const connections = [] as {ws: WebSocket, localConn: LocalServerConnection}[];
+  const connections = [] as { ws: WebSocket, localConn: LocalServerConnection }[];
 
   wss.on('connection', async (ws: WebSocket) => {
     const localConn = await createLocalServerConnection(
