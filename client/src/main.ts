@@ -55,7 +55,6 @@ let lastMoveUpdateTime = 0;
 let eye = vec3.fromValues(0, 0.75 * worldSize, 0);
 let azimuth = 0.0;
 let elevation = 0.0;
-let velocity = vec3.create();
 const keys: { [key: string]: boolean } = {};
 let forwardVelocity = 0.0;
 let rightVelocity = 0.0;
@@ -402,8 +401,8 @@ const init = async () => {
     } else {
       for (const key in keys) {
         keys[key] = false;
-        pauseDialog.showModal();
       }
+      pauseDialog.showModal();
     }
   });
 
@@ -451,7 +450,17 @@ const init = async () => {
         }
         world = m.world.token;
         renderer = await createMeshRenderer(gl, worldSize, m.world.voxels, emojiTexture);
+        const userInfo = m.world.users[username];
+        if (userInfo) {
+          eye = vec3.fromValues(userInfo.pos[0], userInfo.pos[1], userInfo.pos[2]);
+          forwardVelocity = userInfo.vel[0];
+          upVelocity = userInfo.vel[1];
+          rightVelocity = userInfo.vel[2];
+          azimuth = userInfo.azimuth;
+          elevation = userInfo.elevation;
+        }
         entities[username] = createEntity(gl, worldSize, emojiTexture, 0);
+        canvas.requestPointerLock();
         break;
       case MessageType.UserJoined:
         if (!entities[m.username]) {
@@ -592,6 +601,7 @@ const movePlayer = (dt: number) => {
     Math.cos(azimuth - Math.PI / 2)
   );
 
+  const velocity = vec3.create();
   for (let step = 0; step < steps; step += 1) {
     const rightMovement = vec3.clone(right);
     vec3.scale(rightMovement, rightMovement, ddt*rightVelocity);
@@ -656,7 +666,7 @@ const update = (time: number) => {
         pos: [eye[0], eye[1], eye[2]],
         azimuth,
         elevation,
-        vel: [velocity[0], velocity[1], velocity[2]],
+        vel: [forwardVelocity, upVelocity, rightVelocity],
       });
     }
   }
